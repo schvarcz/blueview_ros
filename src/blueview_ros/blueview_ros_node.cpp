@@ -80,8 +80,8 @@ int main(int argc, char **argv)
     ros::NodeHandle nh("~");
 
     //Publish opencv image of sonar
-    //    image_transport::ImageTransport it(n);
-    // image_transport::Publisher image_pub = it.advertise("sonar_image", 1);
+    image_transport::ImageTransport it(n);
+    image_transport::Publisher image_pub = it.advertise("sonar_image", 1);
 
     ///////////////////////////////////////////////////
     // Acquire params from paramserver
@@ -165,13 +165,13 @@ int main(int argc, char **argv)
     //
     //
 
-    //  // cv bridge static settings:
-    //  cv_bridge::CvImage cvi;
-    //  cvi.header.frame_id = "image";
-    //  cvi.encoding = "bgra8"; // sonar image is four channels
-    //
-    //  // Image sensor message
-    //  sensor_msgs::Image msg;
+     // cv bridge static settings:
+     cv_bridge::CvImage cvi;
+     cvi.header.frame_id = "image";
+     cvi.encoding = "bgra8"; // sonar image is four channels
+
+     // Image sensor message
+     sensor_msgs::Image msg;
     // //
     // //  cv::Mat temp;
     // //  sonar.getNextSonarImage(temp);
@@ -217,19 +217,19 @@ int main(int argc, char **argv)
         if (status == Sonar::Success) {
             try {
                 // convert OpenCV image to ROS message
-//                cvi.header.stamp = ros::Time::now();
-//                cvi.image = img;
-//                cvi.toImageMsg(msg);
+               cvi.header.stamp = ros::Time::now();
+               cvi.image = img;
+               cvi.toImageMsg(msg);
 
-//                // Publish the image
-//                image_pub.publish(msg);
+               // Publish the image
+               image_pub.publish(msg);
 
             } catch (cv_bridge::Exception& e) {
                 ROS_ERROR("cv_bridge exception: %s", e.what());
                 return -1;
             }
 
-            cv::imshow("sonar", img);
+            //cv::imshow("sonar", img);
             //cv::imshow("video", video);
             cv::waitKey(33);
         }

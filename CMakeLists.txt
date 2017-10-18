@@ -111,7 +111,7 @@ set( LIB_NAME "blueview_ros" )
 catkin_package(
 INCLUDE_DIRS include $ENV{BLUEVIEW_SDK_ROOT}/include
 LIBRARIES ${LIB_NAME}
-CATKIN_DEPENDS cv_bridge image_transport sensor_msgs
+# CATKIN_DEPENDS cv_bridge image_transport sensor_msgs
 #  DEPENDS system_lib
 )
 
@@ -140,14 +140,14 @@ add_dependencies(blueview_ros_node ${catkin_EXPORTED_TARGETS}  ${${PROJECT_NAME}
 
 ## Specify libraries to link a library or executable target against
  target_link_libraries(${LIB_NAME}
-   ${catkin_LIBRARIES}
+  #  ${catkin_LIBRARIES}
    ${OpenCV_LIBRARIES}
    ${BLUEVIEW_SDK_LIBS}
  )
 
  target_link_libraries(blueview_ros_node
+   ${catkin_LIBRARIES}
     ${LIB_NAME}
-    ${catkin_LIBRARIES}
     ${OpenCV_LIBRARIES}
  )
 
