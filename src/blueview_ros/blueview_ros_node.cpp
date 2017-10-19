@@ -3,8 +3,6 @@
 #include <opencv2/opencv.hpp>
 #include <cv_bridge/cv_bridge.h>
 #include <blueview_ros/Sonar.h>
-
-// #include <std_msgs/String.h>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -56,13 +54,16 @@ void EnableSonarLoggingCallback(const std_msgs::Bool::ConstPtr& msg)
     logging_enabled_ = msg->data;
 
     sonar.SonarLogEnable(msg->data);
-    if (logging_enabled_) {
+    if (logging_enabled_)
+    {
         // Generate the avi file name
         video_filename_ = sonar.current_sonar_file() + ".avi";
         log_filename_ = sonar.current_sonar_file() + ".txt";
         notes_filename_ = sonar.current_sonar_file() + ".notes";
         log_frame_num_ = 0;
-    } else {
+    }
+    else
+    {
         log_file_.close();
         notes_file_.close();
     }
@@ -98,9 +99,12 @@ int main(int argc, char **argv)
     // Grab mode (image or range)
     std::string mode;
     nh.getParam("mode", mode);
-    if (mode == "range") {
+    if (mode == "range")
+    {
         sonar.set_data_mode(Sonar::range);
-    } else {
+    }
+    else
+    {
         sonar.set_data_mode(Sonar::image);
     }
 
@@ -135,11 +139,14 @@ int main(int argc, char **argv)
     std::string ip_addr;
     nh.getParam("net_or_file", net_or_file);
 
-    if (net_or_file == "net") {
+    if (net_or_file == "net")
+    {
         nh.getParam("ip_addr", ip_addr);
         sonar.set_mode(Sonar::net);
         sonar.set_ip_addr(ip_addr);
-    } else {
+    }
+    else
+    {
         nh.getParam("sonar_file", sonar_file);
         sonar.set_mode(Sonar::sonar_file);
         sonar.set_input_son_filename(sonar_file);
@@ -149,10 +156,8 @@ int main(int argc, char **argv)
     sonar.init();
 
     //Subscribe to range commands
-    ros::Subscriber min_range_sub = nh.subscribe("sonar_min_range", 1,
-                                                 MinRangeCallback);
-    ros::Subscriber max_range_sub = nh.subscribe("sonar_max_range", 1,
-                                                 MaxRangeCallback);
+    ros::Subscriber min_range_sub = nh.subscribe("sonar_min_range", 1, MinRangeCallback);
+    ros::Subscriber max_range_sub = nh.subscribe("sonar_max_range", 1, MaxRangeCallback);
 
     cout << "min_dist: " << min_dist << endl;
     cout << "max_dist: " << max_dist << endl;
@@ -163,19 +168,19 @@ int main(int argc, char **argv)
     //
     //
 
-     // cv bridge static settings:
-     cv_bridge::CvImage cvi;
-     cvi.header.frame_id = "image";
-     cvi.encoding = "bgra8"; // sonar image is four channels
+    // cv bridge static settings:
+    cv_bridge::CvImage cvi;
+    cvi.header.frame_id = "image";
+    cvi.encoding = "bgra8"; // sonar image is four channels
 
-     // Image sensor message
-     sensor_msgs::Image msg_img;
-     sensor_msgs::LaserScan msg_laser;
-     msg_laser.angle_min = sonar.getBearingMinAngle();
-     msg_laser.angle_max = sonar.getBearingMaxAngle();
-     msg_laser.angle_increment = sonar.getBearingResolution();
-     msg_laser.range_min = sonar.getRangeMin();
-     msg_laser.range_max = sonar.getRangeMax();
+    // Image sensor message
+    sensor_msgs::Image msg_img;
+    sensor_msgs::LaserScan msg_laser;
+    msg_laser.angle_min = sonar.getBearingMinAngle();
+    msg_laser.angle_max = sonar.getBearingMaxAngle();
+    msg_laser.angle_increment = sonar.getBearingResolution();
+    msg_laser.range_min = sonar.getRangeMin();
+    msg_laser.range_max = sonar.getRangeMax();
     // //
     // //  cv::Mat temp;
     // //  sonar.getNextSonarImage(temp);
@@ -199,16 +204,16 @@ int main(int argc, char **argv)
             {
                 // convert OpenCV image to ROS message
                 ros_time = ros::Time::now();
-               cvi.header.stamp = ros_time;
-               cvi.image = img;
-               cvi.toImageMsg(msg_img);
+                cvi.header.stamp = ros_time;
+                cvi.image = img;
+                cvi.toImageMsg(msg_img);
 
-               // Publish the image
-               image_pub.publish(msg_img);
+                // Publish the image
+                image_pub.publish(msg_img);
 
-               msg_laser.ranges.clear();
-               msg_laser.ranges.insert(msg_laser.ranges.begin(), ranges.begin(),ranges.end());
-               scan_pub.publish(msg_laser);
+                msg_laser.ranges.clear();
+                msg_laser.ranges.insert(msg_laser.ranges.begin(), ranges.begin(),ranges.end());
+                scan_pub.publish(msg_laser);
 
             } catch (cv_bridge::Exception& e) {
                 ROS_ERROR("cv_bridge exception: %s", e.what());
