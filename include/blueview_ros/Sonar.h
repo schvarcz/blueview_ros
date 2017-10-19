@@ -4,10 +4,6 @@
 #define ENABLE_SONAR 1
 
 #include <opencv2/opencv.hpp>
-#include <iostream>
-#include <stdio.h>
-#include <unistd.h>
-#include <fstream>
 
 #if ENABLE_SONAR == 1
 #include <bvt_sdk.h>
@@ -35,8 +31,10 @@ public:
      int getNumPings();
      int getCurrentPingNum();
      void setFrameNum(int num);
-     Status_t getSonarImage(cv::Mat &image, int index);
-     Status_t getNextSonarImage(cv::Mat &image);
+     Status_t getNextSonarData();
+     Status_t getSonarData(int index);
+     Status_t getSonarImage(cv::Mat &image);
+     Status_t getSonarScan(std::vector<double> &ranges);
      int reset();
      Status_t init();
 
@@ -73,15 +71,15 @@ protected:
 #if ENABLE_SONAR == 1
      BVTHead head_;
      BVTSonar son_;
+     BVTPing ping_;
+     BVTSDK::RangeData range_;
 
-     BVTMagImage img_;
-     BVTColorImage cimg_;
-     BVTColorMapper mapper_;
      std::string color_map_;
 
      // Sonar file save / logger members
      BVTSonar son_logger_;
      BVTHead out_head_;
+     std::vector<double> ranges_;
 
 #endif
 

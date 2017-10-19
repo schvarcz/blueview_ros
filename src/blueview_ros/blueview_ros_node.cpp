@@ -9,11 +9,9 @@
 #include <fstream>
 #include <sstream>
 
-// #include <sensor_msgs/Image.h>
-// #include <sensor_msgs/image_encodings.h>
-
 #include <std_msgs/Float32.h>
 #include <std_msgs/Bool.h>
+#include <sensor_msgs/LaserScan.h>
 
 
 #include <boost/filesystem.hpp>
@@ -171,7 +169,9 @@ int main(int argc, char **argv)
      cvi.encoding = "bgra8"; // sonar image is four channels
 
      // Image sensor message
-     sensor_msgs::Image msg;
+     sensor_msgs::Image msg_img;
+     sensor_msgs::LaserScan msg_laser;
+     //msg_laser.angle_min = sonar.
     // //
     // //  cv::Mat temp;
     // //  sonar.getNextSonarImage(temp);
@@ -184,45 +184,21 @@ int main(int argc, char **argv)
     while (ros::ok())
     {
         cv::Mat img;
-        int status = sonar.getNextSonarImage(img);
-        //
-        // // Handle video logging
-        // if (logging_enabled_ && cv_ptr_valid_) {
-        //      if (!record_initialized_) {
-        //           //record_.open(video_filename_,CV_FOURCC('M','J','P','G'),30,cv_img_ptr_->image.size(), true);
-        //           record_.open(video_filename_,CV_FOURCC('D','I','V','X'),15,cv_img_ptr_->image.size(), true);
-        //           record_initialized_ = true;
-        //           log_file_.open(log_filename_.c_str(), std::ios::out);
-        //           if (notes_file_.is_open()) {
-        //                notes_file_.close();
-        //           }
-        //           notes_file_.open(notes_filename_.c_str(), std::ios::out);
-        //      }
-        //      record_ << cv_img_ptr_->image;
-        //
-        //      std::ostringstream frame_num_ss, time_sec_ss, time_nsec_ss;
-        //      frame_num_ss << log_frame_num_++;
-        //      ros_time = ros::Time::now();
-        //      time_sec_ss << ros_time.sec;
-        //      time_nsec_ss << ros_time.nsec;
-        //
-        //      // frame number, time (sec), time (nsec)
-        //      log_file_ << frame_num_ss.str() << "," << time_sec_ss.str()
-        //                << "," << time_nsec_ss.str() << endl;
-        // }
-
-        //cap_ >> video;
-        //record_ << video;
-
-        if (status == Sonar::Success) {
-            try {
+        int status = sonar.getNextSonarData();
+        status = sonar.getSonarImage(img);
+        std::vector<double> ranges;
+        status = sonar.getSonarScan(ranges);
+        if (status == Sonar::Success)
+        {
+            try
+            {
                 // convert OpenCV image to ROS message
                cvi.header.stamp = ros::Time::now();
                cvi.image = img;
-               cvi.toImageMsg(msg);
+               cvi.toImageMsg(msg_img);
 
                // Publish the image
-               image_pub.publish(msg);
+               image_pub.publish(msg_img);
 
             } catch (cv_bridge::Exception& e) {
                 ROS_ERROR("cv_bridge exception: %s", e.what());
@@ -231,7 +207,7 @@ int main(int argc, char **argv)
 
             //cv::imshow("sonar", img);
             //cv::imshow("video", video);
-            cv::waitKey(33);
+//            cv::waitKey(33);
         }
 
 

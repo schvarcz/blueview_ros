@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <fstream>
+//#include <vector>
+#define ENABLE_SONAR 1
 
 using std::cout;
 using std::endl;
@@ -17,18 +19,6 @@ Sonar::Sonar()
 Sonar::~Sonar()
 {
 #if ENABLE_SONAR == 1
-     if (cimg_) {
-          BVTColorImage_Destroy(cimg_);
-     }
-
-     if (img_) {
-          BVTMagImage_Destroy(img_);
-     }
-
-     if (mapper_) {
-          BVTColorMapper_Destroy(mapper_);
-     }
-
      if (son_) {
           BVTSonar_Destroy(son_);
      }
@@ -147,23 +137,6 @@ Sonar::Status_t Sonar::init()
      // Set the range window
      this->set_range(min_range_, max_range_);
 
-     // Build a color mapper
-     mapper_ = BVTColorMapper_Create();
-     if (mapper_ == NULL) {
-          printf("BVTColorMapper_Create: failed\n");
-          return Sonar::Failure;
-     }
-
-     // Load the bone colormap
-     ret = BVTColorMapper_Load(mapper_, color_map_.c_str());
-     if(ret != 0) {
-          if (color_map_ == "") {
-               printf("Color map not set.\n");
-          }
-          printf("BVTColorMapper_Load: ret=%d\n", ret);
-          return Sonar::Failure;
-     }
-
      initialized_ = true;
 
      return Sonar::Success;
@@ -239,30 +212,33 @@ Sonar::Status_t Sonar::SonarLogEnable(bool enable)
      return Sonar::Success;
 }
 
-Sonar::Status_t Sonar::getNextSonarImage(cv::Mat &image)
+Sonar::Status_t Sonar::getNextSonarData()
 {
      Status_t status = Sonar::Failure;
      if (mode_ == Sonar::net) {
-          status = getSonarImage(image, -1);
+          status = getSonarData(-1);
      } else if (cur_ping_ < pings_) {
-          status = getSonarImage(image, cur_ping_++);
+          status = getSonarData(cur_ping_++);
      } else {
           status = Sonar::Failure;
      }
      return status;
 }
 
-Sonar::Status_t Sonar::getSonarImage(cv::Mat &image, int index)
+Sonar::Status_t Sonar::getSonarData(int index)
 {
 #if ENABLE_SONAR == 1
 
-     if (!initialized_) {
+     if (!initialized_)
+     {
           cout << "Sonar wasn't initialized." << endl;
           return Sonar::Failure;
      }
 
-     BVTPing ping = NULL;
-     int ret = BVTHead_GetPing(head_, index, &ping);
+     if(ping_)
+        BVTPing_Destroy(ping_);
+
+     int ret = BVTHead_GetPing(head_, index, &ping_);
 
      if(ret != 0) {
           printf("BVTHead_GetPing: ret=%d\n", ret);
@@ -270,52 +246,91 @@ Sonar::Status_t Sonar::getSonarImage(cv::Mat &image, int index)
      }
 
      // Logging is enabled, write to file
-     if (logging_) {
-          ret = BVTHead_PutPing(out_head_, ping);
-          if (ret != 0) {
+     if (logging_)
+     {
+          ret = BVTHead_PutPing(out_head_, ping_);
+          if (ret != 0)
+          {
                printf("BVTHead_PutPing: ret=%d\n", ret);
                return Sonar::Failure;
           }
      }
 
-     ret = BVTPing_GetImage(ping, &img_);
-     //ret = BVTPing_GetImageXY(ping, &img_);
-     //ret = BVTPing_GetImageRTheta(ping, &img_);
-     if (ret != 0) {
-          printf("BVTPing_GetImage: ret=%d\n", ret);
-          return Sonar::Failure;
-     }
-
-     // Perform the colormapping
-     ret = BVTColorMapper_MapImage(mapper_, img_, &cimg_);
-     if (ret != 0) {
-          printf("BVTColorMapper_MapImage: ret=%d\n", ret);
-          return Sonar::Failure;
-     }
-
-     height_ = BVTColorImage_GetHeight(cimg_);
-     width_ = BVTColorImage_GetWidth(cimg_);
-
-     cv::Mat img(height_, width_, CV_8UC4, BVTColorImage_GetBits(cimg_), width_*4);
-     image = img;
-    //  IplImage* sonarImg;
-    //  sonarImg = cvCreateImageHeader(cvSize(width_,height_), IPL_DEPTH_8U, 4);
-     //
-    //  // And set it's data
-    //  cvSetImageData(sonarImg,  BVTColorImage_GetBits(cimg_), width_*4);
-     //
-    //  //cv::Mat tempImg(sonarImg);
-    //  //cv::Mat tempImg = sonarImg);
-    //  //image = sonarImg;
-    //  image = cv::cvarrToMat(sonarImg); // opencv3?
-     //
-    //  cvReleaseImageHeader(&sonarImg);
-     BVTPing_Destroy(ping);
-
      return Sonar::Success;
 #else
      return Sonar::Failure;
 #endif
+}
+
+Sonar::Status_t Sonar::getSonarImage(cv::Mat &image)
+{
+    BVTMagImage img;
+    BVTColorImage cimg;
+
+    // Build a color mapper
+    BVTColorMapper mapper = BVTColorMapper_Create();
+    if (mapper == NULL)
+    {
+         printf("BVTColorMapper_Create: failed\n");
+         return Sonar::Failure;
+    }
+
+    // Load the bone colormap
+    int ret = BVTColorMapper_Load(mapper, color_map_.c_str());
+    if(ret != 0)
+    {
+         if (color_map_ == "")
+         {
+              printf("Color map not set.\n");
+         }
+         printf("BVTColorMapper_Load: ret=%d\n", ret);
+         return Sonar::Failure;
+    }
+
+
+    ret = BVTPing_GetImage(ping_, &img);
+    //ret = BVTPing_GetImageXY(ping, &img);
+    //ret = BVTPing_GetImageRTheta(ping, &img);
+    if (ret != 0)
+    {
+         printf("BVTPing_GetImage: ret=%d\n", ret);
+         return Sonar::Failure;
+    }
+
+    // Perform the colormapping
+    ret = BVTColorMapper_MapImage(mapper, img, &cimg);
+    if (ret != 0)
+    {
+         printf("BVTColorMapper_MapImage: ret=%d\n", ret);
+         return Sonar::Failure;
+    }
+
+    height_ = BVTColorImage_GetHeight(cimg);
+    width_ = BVTColorImage_GetWidth(cimg);
+
+    cv::Mat imgcv(height_, width_, CV_8UC4, BVTColorImage_GetBits(cimg), width_*4);
+    image = imgcv;
+
+    BVTMagImage_Destroy(img);
+    BVTColorMapper_Destroy(mapper);
+    BVTColorImage_Destroy(cimg);
+    return Sonar::Success;
+}
+
+Sonar::Status_t Sonar::getSonarScan(std::vector<double> &ranges)
+{
+    Status_t status = Sonar::Failure;
+    if(cur_ping_> 0) //For the real BlueView is not going to work
+    {
+        status = Sonar::Success;
+
+        BVTPing_GetRangeData( ping_, range_ );
+        ranges.resize(range_.GetCount());
+        for(int j=0; j<range_.GetCount(); j++)
+            ranges[j] = range_.GetRangeValue(j);
+    }
+
+    return status;
 }
 
 int Sonar::width()
