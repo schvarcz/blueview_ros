@@ -13,7 +13,6 @@
 #include <std_msgs/Bool.h>
 #include <sensor_msgs/LaserScan.h>
 
-
 #include <boost/filesystem.hpp>
 
 using std::cout;
@@ -80,6 +79,7 @@ int main(int argc, char **argv)
     //Publish opencv image of sonar
     image_transport::ImageTransport it(n);
     image_transport::Publisher image_pub = it.advertise("sonar_image", 1);
+    ros::Publisher scan_pub = n.advertise<sensor_msgs::LaserScan>("scan", 1);
 
     ///////////////////////////////////////////////////
     // Acquire params from paramserver
@@ -171,7 +171,11 @@ int main(int argc, char **argv)
      // Image sensor message
      sensor_msgs::Image msg_img;
      sensor_msgs::LaserScan msg_laser;
-     //msg_laser.angle_min = sonar.
+     msg_laser.angle_min = sonar.getBearingMinAngle();
+     msg_laser.angle_max = sonar.getBearingMaxAngle();
+     msg_laser.angle_increment = sonar.getBearingResolution();
+     msg_laser.range_min = sonar.getRangeMin();
+     msg_laser.range_max = sonar.getRangeMax();
     // //
     // //  cv::Mat temp;
     // //  sonar.getNextSonarImage(temp);
@@ -181,33 +185,35 @@ int main(int argc, char **argv)
     // //
     ros::Time ros_time;
 
+    cv::Mat img;
+    std::vector<double> ranges;
+    int status;
     while (ros::ok())
     {
-        cv::Mat img;
-        int status = sonar.getNextSonarData();
+        status = sonar.getNextSonarData();
         status = sonar.getSonarImage(img);
-        std::vector<double> ranges;
         status = sonar.getSonarScan(ranges);
         if (status == Sonar::Success)
         {
             try
             {
                 // convert OpenCV image to ROS message
-               cvi.header.stamp = ros::Time::now();
+                ros_time = ros::Time::now();
+               cvi.header.stamp = ros_time;
                cvi.image = img;
                cvi.toImageMsg(msg_img);
 
                // Publish the image
                image_pub.publish(msg_img);
 
+               msg_laser.ranges.clear();
+               msg_laser.ranges.insert(msg_laser.ranges.begin(), ranges.begin(),ranges.end());
+               scan_pub.publish(msg_laser);
+
             } catch (cv_bridge::Exception& e) {
                 ROS_ERROR("cv_bridge exception: %s", e.what());
                 return -1;
             }
-
-            //cv::imshow("sonar", img);
-            //cv::imshow("video", video);
-//            cv::waitKey(33);
         }
 
 

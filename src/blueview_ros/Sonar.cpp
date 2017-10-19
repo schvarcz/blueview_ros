@@ -333,6 +333,40 @@ Sonar::Status_t Sonar::getSonarScan(std::vector<double> &ranges)
     return status;
 }
 
+double Sonar::getBearingMinAngle()
+{
+    BVTPing_GetRangeData( ping_, range_ );
+    return range_.GetFOVMinAngle();
+}
+
+double Sonar::getBearingMaxAngle()
+{
+    BVTPing_GetRangeData( ping_, range_ );
+    return range_.GetFOVMaxAngle();
+}
+
+double Sonar::getBearingResolution()
+{
+    BVTPing_GetRangeData( ping_, range_ );
+    return range_.GetBearingResolution();
+}
+
+double Sonar::getRangeMin()
+{
+    return BVTHead_GetMinimumRange(head_);
+}
+
+double Sonar::getRangeMax()
+{
+    return BVTHead_GetMaximumRange(head_);
+}
+
+double Sonar::getRangeResolution()
+{
+    BVTPing_GetRangeData( ping_, range_ );
+    return range_.GetRangeResolution();
+}
+
 int Sonar::width()
 {
      return width_;

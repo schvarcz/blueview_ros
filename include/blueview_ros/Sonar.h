@@ -28,16 +28,26 @@ public:
 
      Sonar();
      ~Sonar();
+     Status_t init();
+
      int getNumPings();
      int getCurrentPingNum();
-     void setFrameNum(int num);
+
+     double getBearingMinAngle();
+     double getBearingMaxAngle();
+     double getBearingResolution();
+     double getRangeMin();
+     double getRangeMax();
+     double getRangeResolution();
+
+
      Status_t getNextSonarData();
      Status_t getSonarData(int index);
      Status_t getSonarImage(cv::Mat &image);
      Status_t getSonarScan(std::vector<double> &ranges);
      int reset();
-     Status_t init();
 
+     void setFrameNum(int num);
      void set_mode(SonarMode_t mode);
      void set_data_mode(DataMode_t data_mode);
      void set_ip_addr(const std::string &ip_addr);
