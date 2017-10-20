@@ -5,8 +5,11 @@
 #include <opencv2/opencv.hpp>
 #include <cv_bridge/cv_bridge.h>
 #include <std_msgs/Float32.h>
-#include <sensor_msgs/LaserScan.h>
 #include <tf/transform_broadcaster.h>
+#include <sensor_msgs/LaserScan.h>
+#include <sensor_msgs/PointCloud.h>
+#include <sensor_msgs/ChannelFloat32.h>
+#include <geometry_msgs/Point32.h>
 
 #include <blueview_ros/Sonar.h>
 
@@ -85,6 +88,7 @@ int main(int argc, char **argv)
     //Publish opencv image of sonar
     image_transport::ImageTransport it(n);
     image_transport::Publisher image_pub = it.advertise("sonar_image", 1);
+    image_transport::Publisher image_pub_colored = it.advertise("sonar_image_colored", 1);
     ros::Publisher scan_pub = n.advertise<sensor_msgs::LaserScan>("scan", 1);
 
     //Subscribe to range commands
@@ -97,37 +101,48 @@ int main(int argc, char **argv)
     // cv bridge static settings:
     cv_bridge::CvImage cvi;
     cvi.header.frame_id = "image";
-    cvi.encoding = "bgra8"; // sonar image is four channels
+    cvi.encoding = "mono16";
+    cv_bridge::CvImage cvic;
+    cvic.header.frame_id = "image_colored";
+    cvic.encoding = "bgra8"; // sonar image is four channels
 
     // Image sensor message
-    sensor_msgs::Image msg_img;
+    sensor_msgs::Image msg_img, msg_img_colored;
     sensor_msgs::LaserScan msg_laser;
     msg_laser.header.frame_id = "bv_rangedata";
 
     ros::Time current_time;
     ros::Rate rate(tick_rate);
 
-    cv::Mat img;
+    cv::Mat img, imgColored;
     std::vector<double> ranges;
     int status;
     while (ros::ok())
     {
         status = sonar.getNextSonarData();
         status = sonar.getSonarImage(img);
+        status = sonar.getSonarColoredImage(imgColored);
         status = sonar.getSonarScan(ranges);
         if (status == Sonar::Success)
         {
             try
             {
-                // convert OpenCV image to ROS message
                 current_time = ros::Time::now();
+
+                // convert OpenCV image to ROS message
                 cvi.header.stamp = current_time;
                 cvi.image = img;
                 cvi.toImageMsg(msg_img);
 
+                cvic.header.stamp = current_time;
+                cvic.image = imgColored;
+                cvic.toImageMsg(msg_img_colored);
+
                 // Publish the image
                 image_pub.publish(msg_img);
+                image_pub_colored.publish(msg_img_colored);
 
+                //Publish Range Data
                 msg_laser.header.stamp = current_time;
                 msg_laser.angle_min = sonar.getBearingMinAngle()*M_PI/180.;
                 msg_laser.angle_max = sonar.getBearingMaxAngle()*M_PI/180.;
@@ -138,7 +153,6 @@ int main(int argc, char **argv)
                 msg_laser.ranges.clear();
                 msg_laser.ranges.insert(msg_laser.ranges.begin(), ranges.begin(),ranges.end());
                 scan_pub.publish(msg_laser);
-
 
                 geometry_msgs::TransformStamped range_trans;
                 range_trans.header.stamp = current_time;

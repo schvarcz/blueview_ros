@@ -37,6 +37,7 @@ public:
     Status_t getNextSonarData();
     Status_t getSonarData(int index);
     Status_t getSonarImage(cv::Mat &image);
+    Status_t getSonarColoredImage(cv::Mat &image);
     Status_t getSonarScan(std::vector<double> &ranges);
 
     int reset();

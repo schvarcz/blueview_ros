@@ -264,6 +264,46 @@ Sonar::Status_t Sonar::getSonarData(int index)
 Sonar::Status_t Sonar::getSonarImage(cv::Mat &image)
 {
     BVTMagImage img;
+
+    int ret;
+#if (BVTSDK_VERSION >= 4)
+    BVTImageGenerator imager = BVTImageGenerator_Create();
+    BVTImageGenerator_SetHead(imager, head_);
+    ret = BVTImageGenerator_GetImageXY(imager, ping_, &img);
+    BVTImageGenerator_Destroy(imager);
+    if (ret != 0)
+    {
+        printf("BVTPing_GetImage: ret=%d\n", ret);
+        return Sonar::Failure;
+    }
+    BVTMagImage_GetHeight(img, &height_);
+    BVTMagImage_GetWidth(img, &width_);
+#else
+    ret = BVTPing_GetImage(ping_, &img);
+    if (ret != 0)
+    {
+        printf("BVTPing_GetImage: ret=%d\n", ret);
+        return Sonar::Failure;
+    }
+    height_ = BVTMagImage_GetHeight(img);
+    width_ = BVTMagImage_GetWidth(img);
+#endif // (BVTSDK_VERSION >= 4)
+
+
+    unsigned int len = height_*width_;
+    unsigned short* data = new unsigned short[len];
+    BVTMagImage_CopyBits(img, data, len);
+    cv::Mat imgcv(height_, width_, CV_16UC1, data, width_*2);
+    image = imgcv.clone();
+
+    delete[] data;
+    BVTMagImage_Destroy(img);
+    return Sonar::Success;
+}
+
+Sonar::Status_t Sonar::getSonarColoredImage(cv::Mat &image_colored)
+{
+    BVTMagImage img;
     BVTColorImage cimg;
 
     // Build a color mapper
@@ -317,10 +357,13 @@ Sonar::Status_t Sonar::getSonarImage(cv::Mat &image)
         return Sonar::Failure;
     }
 
+    unsigned int len = height_*width_;
+    unsigned int* data = new unsigned int[len*4];
+    BVTColorImage_CopyBits(cimg, data, len);
+    cv::Mat imgcv(height_, width_, CV_8UC4, data, width_*4);
+    image_colored = imgcv.clone();
 
-    cv::Mat imgcv(height_, width_, CV_8UC4, BVTColorImage_GetBits(cimg), width_*4);
-    image = imgcv;
-
+    delete[] data;
     BVTMagImage_Destroy(img);
     BVTColorMapper_Destroy(mapper);
     BVTColorImage_Destroy(cimg);
