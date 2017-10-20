@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <fstream>
-//#include <vector>
 #define ENABLE_SONAR 1
 
 using std::cout;
@@ -19,6 +18,12 @@ Sonar::Sonar()
 Sonar::~Sonar()
 {
 #if ENABLE_SONAR == 1
+
+#if (BVTSDK_VERSION >= 4)
+    if (head_)
+        BVTHead_Destroy(head_);
+#endif // (BVTSDK_VERSION >= 4)
+
     if (son_)
         BVTSonar_Destroy(son_);
 
@@ -63,46 +68,48 @@ Sonar::Status_t Sonar::init()
                 manual_sonar_found = true;
             }
         }
-        //
-        // if (!manual_sonar_found) {
-        //      //Create the discovery agent
-        //      BVTSonarDiscoveryAgent agent = BVTSonarDiscoveryAgent_Create();
-        //      if( agent == NULL ) {
-        //           printf("BVTSonarDiscoverAgent_Create: failed\n");
-        //           return Sonar::Failure;
-        //      }
-        //
-        //      // Kick off the discovery process
-        //      ret = BVTSonarDiscoveryAgent_Start(agent);
-        //
-        //      //Let the discovery process run for a short while (5 secs)
-        //      cout << "Searching for available sonars..." << endl;
-        //      sleep(5);
-        //
-        //      // See what we found
-        //      int numSonars = 0;
-        //      numSonars = BVTSonarDiscoveryAgent_GetSonarCount(agent);
-        //
-        //      char SonarIPAddress[20];
-        //
-        //      for(int i = 0; i < numSonars; i++) {
-        //           ret = BVTSonarDiscoveryAgent_GetSonarInfo(agent, i, &SonarIPAddress[0], 20);
-        //           printf("Found Sonar: %d, IP address: %s\n", i, SonarIPAddress);
-        //      }
-        //
-        //      if(numSonars == 0) {
-        //           printf("No Sonars Found\n");
-        //           return Sonar::Failure;
-        //      }
-        //
-        //      // Open the sonar
-        //      //ret = BVTSonar_Open(son_, "NET", "192.168.1.45");
-        //      ret = BVTSonar_Open(son_, "NET", SonarIPAddress);
-        //      if( ret != 0 ) {
-        //           printf("BVTSonar_Open: ret=%d\n", ret);
-        //           return Sonar::Failure;
-        //      }
-        // }
+
+#if (BVTSDK_VERSION >= 4)
+         if (!manual_sonar_found) {
+              //Create the discovery agent
+              BVTSonarDiscoveryAgent agent = BVTSonarDiscoveryAgent_Create();
+              if( agent == NULL ) {
+                   printf("BVTSonarDiscoverAgent_Create: failed\n");
+                   return Sonar::Failure;
+              }
+
+              // Kick off the discovery process
+              ret = BVTSonarDiscoveryAgent_Start(agent);
+
+              //Let the discovery process run for a short while (5 secs)
+              cout << "Searching for available sonars..." << endl;
+              sleep(5);
+
+              // See what we found
+              int numSonars = 0;
+              numSonars = BVTSonarDiscoveryAgent_GetSonarCount(agent);
+
+              char SonarIPAddress[20];
+
+              for(int i = 0; i < numSonars; i++) {
+                   ret = BVTSonarDiscoveryAgent_GetSonarInfo(agent, i, &SonarIPAddress[0], 20);
+                   printf("Found Sonar: %d, IP address: %s\n", i, SonarIPAddress);
+              }
+
+              if(numSonars == 0) {
+                   printf("No Sonars Found\n");
+                   return Sonar::Failure;
+              }
+
+              // Open the sonar
+              //ret = BVTSonar_Open(son_, "NET", "192.168.1.45");
+              ret = BVTSonar_Open(son_, "NET", SonarIPAddress);
+              if( ret != 0 ) {
+                   printf("BVTSonar_Open: ret=%d\n", ret);
+                   return Sonar::Failure;
+              }
+         }
+#endif // (BVTSDK_VERSION >= 4)
 
     }
     else
@@ -152,29 +159,8 @@ Sonar::Status_t Sonar::init()
     return Sonar::Success;
 #else
     return Sonar::Failure;
-#endif
+#endif // (ENABLE_SONAR == 1)
 
-}
-
-int Sonar::getNumPings()
-{
-    return pings_;
-}
-
-int Sonar::getCurrentPingNum()
-{
-    return cur_ping_;
-}
-
-void Sonar::setFrameNum(int num)
-{
-    cur_ping_ = num;
-}
-
-int Sonar::reset()
-{
-    cur_ping_ = 0;
-    return cur_ping_;
 }
 
 Sonar::Status_t Sonar::setSonarLogEnable(bool enable)
@@ -305,15 +291,28 @@ Sonar::Status_t Sonar::getSonarImage(cv::Mat &image)
         return Sonar::Failure;
     }
 
-
-    ret = BVTPing_GetImage(ping_, &img);
-    //ret = BVTPing_GetImageXY(ping, &img);
-    //ret = BVTPing_GetImageRTheta(ping, &img);
+#if (BVTSDK_VERSION >= 4)
+    BVTImageGenerator imager = BVTImageGenerator_Create();
+    BVTImageGenerator_SetHead(imager, head_);
+    ret = BVTImageGenerator_GetImageXY(imager, ping_, &img);
+    BVTImageGenerator_Destroy(imager);
     if (ret != 0)
     {
         printf("BVTPing_GetImage: ret=%d\n", ret);
         return Sonar::Failure;
     }
+    BVTMagImage_GetHeight(img, &height_);
+    BVTMagImage_GetWidth(img, &width_);
+#else
+    ret = BVTPing_GetImage(ping_, &img);
+    if (ret != 0)
+    {
+        printf("BVTPing_GetImage: ret=%d\n", ret);
+        return Sonar::Failure;
+    }
+    height_ = BVTMagImage_GetHeight(img);
+    width_ = BVTMagImage_GetWidth(img);
+#endif // (BVTSDK_VERSION >= 4)
 
     // Perform the colormapping
     ret = BVTColorMapper_MapImage(mapper, img, &cimg);
@@ -323,8 +322,6 @@ Sonar::Status_t Sonar::getSonarImage(cv::Mat &image)
         return Sonar::Failure;
     }
 
-    height_ = BVTColorImage_GetHeight(cimg);
-    width_ = BVTColorImage_GetWidth(cimg);
 
     cv::Mat imgcv(height_, width_, CV_8UC4, BVTColorImage_GetBits(cimg), width_*4);
     image = imgcv;
@@ -349,6 +346,27 @@ Sonar::Status_t Sonar::getSonarScan(std::vector<double> &ranges)
     }
 
     return status;
+}
+
+int Sonar::getNumPings()
+{
+    return pings_;
+}
+
+int Sonar::getCurrentPingNum()
+{
+    return cur_ping_;
+}
+
+void Sonar::setFrameNum(int num)
+{
+    cur_ping_ = num;
+}
+
+int Sonar::reset()
+{
+    cur_ping_ = 0;
+    return cur_ping_;
 }
 
 double Sonar::getBearingMinAngle()
