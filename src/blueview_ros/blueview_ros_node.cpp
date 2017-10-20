@@ -31,71 +31,75 @@ int main(int argc, char **argv)
     ros::NodeHandle n;
     ros::NodeHandle nh("~");
 
-    //Publish opencv image of sonar
-    image_transport::ImageTransport it(n);
-    image_transport::Publisher image_pub = it.advertise("sonar_image", 1);
-    ros::Publisher scan_pub = n.advertise<sensor_msgs::LaserScan>("scan", 1);
+
 
     ///////////////////////////////////////////////////
     // Acquire params from paramserver
     ///////////////////////////////////////////////////
-    // Grab minimum distance
-    double min_dist=-2;
-    nh.getParam("min_dist", min_dist);
+    double min_dist = 0,
+            max_dist = 20, tick_rate;
+    std::string mode,
+            color_map,
+            net_or_file, sonar_file, ip_addr;
 
-    // Grab maximim distance
-    double max_dist;
+    // Grab distance range
+    nh.getParam("min_dist", min_dist);
+    nh.getParam("tick_rate", tick_rate);
+
     nh.getParam("max_dist", max_dist);
 
-    // Set sonar range
-    sonar.setRange(min_dist, max_dist);
-
     // Grab mode (image or range)
-    std::string mode;
     nh.getParam("mode", mode);
-    if (mode == "range")
-        sonar.setDataMode(Sonar::range);
-    else
-        sonar.setDataMode(Sonar::image);
 
     // Grab color map filename
-    std::string color_map;
     nh.getParam("color_map", color_map);
-    sonar.setColorMap(color_map);
+
+    nh.getParam("net_or_file", net_or_file);
+    nh.getParam("ip_addr", ip_addr);
+    nh.getParam("sonar_file", sonar_file);
+
+
 
     // Determine if a live "net" sonar will be used or if we are reading
     // from a file
-    std::string net_or_file;
-    // Grab sonar file name
-    std::string sonar_file;
-    // Grab suggested ip address
-    std::string ip_addr;
-    nh.getParam("net_or_file", net_or_file);
 
     if (net_or_file == "net")
     {
-        nh.getParam("ip_addr", ip_addr);
         sonar.setMode(Sonar::net);
         sonar.setIpAddr(ip_addr);
     }
     else
     {
-        nh.getParam("sonar_file", sonar_file);
         sonar.setMode(Sonar::sonar_file);
         sonar.setInputSonFilename(sonar_file);
     }
 
-    // Initialize the sonar
-    sonar.init();
+    sonar.setRange(min_dist, max_dist);
+    if (mode == "range")
+        sonar.setDataMode(Sonar::range);
+    else
+        sonar.setDataMode(Sonar::image);
 
-    //Subscribe to range commands
-    ros::Subscriber min_range_sub = nh.subscribe("sonar_min_range", 1, MinRangeCallback);
-    ros::Subscriber max_range_sub = nh.subscribe("sonar_max_range", 1, MaxRangeCallback);
+    sonar.setColorMap(color_map);
+
 
     cout << "min_dist: " << min_dist << endl;
     cout << "max_dist: " << max_dist << endl;
     cout << "color_map: " << color_map << endl;
     cout << "sonar_file: " << sonar_file << endl;
+
+    // Initialize the sonar
+    sonar.init();
+
+    //Publish opencv image of sonar
+    image_transport::ImageTransport it(n);
+    image_transport::Publisher image_pub = it.advertise("sonar_image", 1);
+    ros::Publisher scan_pub = n.advertise<sensor_msgs::LaserScan>("scan", 1);
+
+    //Subscribe to range commands
+    ros::Subscriber min_range_sub = nh.subscribe("sonar_min_range", 1, MinRangeCallback);
+    ros::Subscriber max_range_sub = nh.subscribe("sonar_max_range", 1, MaxRangeCallback);
+
 
     // cv bridge static settings:
     cv_bridge::CvImage cvi;
