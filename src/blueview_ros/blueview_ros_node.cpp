@@ -6,6 +6,7 @@
 #include <cv_bridge/cv_bridge.h>
 #include <std_msgs/Float32.h>
 #include <sensor_msgs/LaserScan.h>
+#include <tf/transform_broadcaster.h>
 
 #include <blueview_ros/Sonar.h>
 
@@ -96,6 +97,8 @@ int main(int argc, char **argv)
     ros::Subscriber min_range_sub = nh.subscribe("sonar_min_range", 1, MinRangeCallback);
     ros::Subscriber max_range_sub = nh.subscribe("sonar_max_range", 1, MaxRangeCallback);
 
+    tf::TransformBroadcaster tf_broadcaster;
+
 
     // cv bridge static settings:
     cv_bridge::CvImage cvi;
@@ -105,13 +108,9 @@ int main(int argc, char **argv)
     // Image sensor message
     sensor_msgs::Image msg_img;
     sensor_msgs::LaserScan msg_laser;
-    msg_laser.angle_min = sonar.getBearingMinAngle();
-    msg_laser.angle_max = sonar.getBearingMaxAngle();
-    msg_laser.angle_increment = sonar.getBearingResolution();
-    msg_laser.range_min = sonar.getRangeMin();
-    msg_laser.range_max = sonar.getRangeMax();
+    msg_laser.header.frame_id = "bv_rangedata";
 
-    ros::Time ros_time;
+    ros::Time current_time;
     ros::Rate rate(tick_rate);
 
     cv::Mat img;
@@ -127,17 +126,36 @@ int main(int argc, char **argv)
             try
             {
                 // convert OpenCV image to ROS message
-                ros_time = ros::Time::now();
-                cvi.header.stamp = ros_time;
+                current_time = ros::Time::now();
+                cvi.header.stamp = current_time;
                 cvi.image = img;
                 cvi.toImageMsg(msg_img);
 
                 // Publish the image
                 image_pub.publish(msg_img);
 
+                msg_laser.header.stamp = current_time;
+                msg_laser.angle_min = sonar.getBearingMinAngle()*M_PI/180.;
+                msg_laser.angle_max = sonar.getBearingMaxAngle()*M_PI/180.;
+                msg_laser.angle_increment = sonar.getBearingResolution()*M_PI/180.;
+                msg_laser.range_min = sonar.getRangeMin();
+                msg_laser.range_max = sonar.getRangeMax();
+
                 msg_laser.ranges.clear();
                 msg_laser.ranges.insert(msg_laser.ranges.begin(), ranges.begin(),ranges.end());
                 scan_pub.publish(msg_laser);
+
+
+                geometry_msgs::TransformStamped range_trans;
+                range_trans.header.stamp = current_time;
+                range_trans.header.frame_id = "bv_rangedata";
+                range_trans.child_frame_id = "base_link";
+
+                range_trans.transform.translation.x = 0;
+                range_trans.transform.translation.y = 0;
+                range_trans.transform.translation.z = 0.0;
+                range_trans.transform.rotation = tf::createQuaternionMsgFromYaw(0);
+                tf_broadcaster.sendTransform(range_trans);
 
             } catch (cv_bridge::Exception& e) {
                 ROS_ERROR("cv_bridge exception: %s", e.what());
