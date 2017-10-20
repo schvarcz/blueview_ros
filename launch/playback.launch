@@ -1,5 +1,5 @@
 <launch>
-    <arg name="sonar_address" default="/home/schvarcz/Desktop/sonar_guerledan/Oct_13_2017_120410.son" />
+    <arg name="sonar_address" default="/home/schvarcz/Desktop/sonar_guerledan/Oct_13_2017_110048.son" />
     <arg name="color_map_file" default="$(find blueview_ros)/colormaps/jet.cmap" />
 
     <node pkg="blueview_ros" name="blueview_ros_image" type="blueview_ros_node" output="screen">

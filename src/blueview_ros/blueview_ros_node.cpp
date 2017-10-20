@@ -29,6 +29,43 @@ void MaxRangeCallback(const std_msgs::Float32::ConstPtr& msg)
     sonar.setMaxRange(msg->data);
 }
 
+sensor_msgs::PointCloud cv2pointCloud(cv::Mat image)
+{
+    sensor_msgs::PointCloud pc_msg;
+    sensor_msgs::ChannelFloat32 ch_msg;
+    ch_msg.name = "intensity";
+
+    cv::Mat img, gray, pts;
+    image.convertTo(img, CV_32F);
+    cv::threshold(img, gray, 1000, 255, cv::THRESH_BINARY);
+    gray.convertTo(gray, CV_8U);
+    cv::findNonZero(gray, pts);
+
+    cv::Point2i sonarCenter(sonar.width()/2,sonar.height());
+    double curDist, curBearing;
+    cv::Point curPoint;
+    geometry_msgs::Point32 point;
+    for(int i = 0; i< pts.rows; i++)
+    {
+        curPoint = pts.at<cv::Point>(i);
+
+        curDist = sqrt(pow(curPoint.x - sonarCenter.x ,2) + pow(sonar.height() - curPoint.y,2));
+        curBearing = asin((curPoint.x - sonarCenter.x)/curDist);
+        curDist *= sonar.getRangeResolution();
+
+        point.x = curDist*cos(curBearing);
+        point.y = curDist*sin(curBearing);
+        point.z = 0;
+        pc_msg.points.push_back(point);
+
+        ch_msg.values.push_back(image.at<short>(curPoint));
+    }
+
+    pc_msg.channels.push_back(ch_msg);
+
+    return pc_msg;
+}
+
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "bluview_ros_node");
@@ -90,6 +127,7 @@ int main(int argc, char **argv)
     image_transport::Publisher image_pub = it.advertise("sonar_image", 1);
     image_transport::Publisher image_pub_colored = it.advertise("sonar_image_colored", 1);
     ros::Publisher scan_pub = n.advertise<sensor_msgs::LaserScan>("scan", 1);
+    ros::Publisher pc_pub = n.advertise<sensor_msgs::PointCloud>("point_cloud", 1);
 
     //Subscribe to range commands
     ros::Subscriber min_range_sub = nh.subscribe("sonar_min_range", 1, MinRangeCallback);
@@ -109,7 +147,9 @@ int main(int argc, char **argv)
     // Image sensor message
     sensor_msgs::Image msg_img, msg_img_colored;
     sensor_msgs::LaserScan msg_laser;
+    sensor_msgs::PointCloud pc_msg;
     msg_laser.header.frame_id = "bv_rangedata";
+    pc_msg.header.frame_id = "bv_pointcloud";
 
     ros::Time current_time;
     ros::Rate rate(tick_rate);
@@ -156,14 +196,31 @@ int main(int argc, char **argv)
 
                 geometry_msgs::TransformStamped range_trans;
                 range_trans.header.stamp = current_time;
-                range_trans.header.frame_id = "bv_rangedata";
-                range_trans.child_frame_id = "base_link";
+                range_trans.header.frame_id = "base_link";
+                range_trans.child_frame_id = "bv_rangedata";
 
-                range_trans.transform.translation.x = 0;
-                range_trans.transform.translation.y = 0;
+                range_trans.transform.translation.x = 0.0;
+                range_trans.transform.translation.y = 0.0;
                 range_trans.transform.translation.z = 0.0;
                 range_trans.transform.rotation = tf::createQuaternionMsgFromYaw(0);
                 tf_broadcaster.sendTransform(range_trans);
+
+                //Publish Point Cloud
+                pc_msg = cv2pointCloud(img);
+                pc_msg.header.stamp = current_time;
+                pc_msg.header.frame_id = "bv_pointcloud";
+                pc_pub.publish(pc_msg);
+
+                geometry_msgs::TransformStamped pc_trans;
+                pc_trans.header.stamp = current_time;
+                pc_trans.header.frame_id = "base_link";
+                pc_trans.child_frame_id = "bv_pointcloud";
+
+                pc_trans.transform.translation.x = 0.0;
+                pc_trans.transform.translation.y = 0.0;
+                pc_trans.transform.translation.z = 0.0;
+                pc_trans.transform.rotation = tf::createQuaternionMsgFromYaw(0);
+                tf_broadcaster.sendTransform(pc_trans);
 
             } catch (cv_bridge::Exception& e) {
                 ROS_ERROR("cv_bridge exception: %s", e.what());

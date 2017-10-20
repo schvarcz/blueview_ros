@@ -6,6 +6,7 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
+        - /LaserScan1
         - /PointCloud1
       Splitter Ratio: 0.5
     Tree Height: 370
@@ -52,14 +53,14 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: -9999
-        Min Value: 9999
+        Max Value: 0
+        Min Value: 0
         Value: true
       Axis: Z
       Channel Name: y
       Class: rviz/LaserScan
       Color: 255; 255; 255
-      Color Transformer: AxisColor
+      Color Transformer: FlatColor
       Decay Time: 0
       Enabled: true
       Invert Rainbow: false
@@ -103,24 +104,24 @@ Visualization Manager:
       Color: 255; 255; 255
       Color Transformer: Intensity
       Decay Time: 0
-      Enabled: false
+      Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
-      Max Intensity: 4096
+      Max Intensity: 5529
       Min Color: 0; 0; 0
-      Min Intensity: 0
+      Min Intensity: 1001
       Name: PointCloud
       Position Transformer: XYZ
       Queue Size: 10
       Selectable: true
       Size (Pixels): 3
-      Size (m): 0.00999999978
+      Size (m): 0.0500000007
       Style: Flat Squares
       Topic: /Test/point_cloud
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: false
+      Value: true
     - Class: rviz/Image
       Enabled: true
       Image Topic: /Test/sonar_image_colored
@@ -157,25 +158,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 101.123451
+      Distance: 28.4048176
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 15.3102961
-        Y: 0.079164207
-        Z: -0.000137441762
+        X: 35.5860291
+        Y: -8.15173626
+        Z: 0.707781494
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.0500000007
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: -1.56979632
+      Pitch: -1.42479646
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 4.70858383
+      Yaw: 4.54858255
     Saved: ~
 Window Geometry:
   Displays:
