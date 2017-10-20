@@ -21,12 +21,12 @@ Sonar sonar;
 
 void MinRangeCallback(const std_msgs::Float32::ConstPtr& msg)
 {
-    sonar.set_min_range(msg->data);
+    sonar.setMinRange(msg->data);
 }
 
 void MaxRangeCallback(const std_msgs::Float32::ConstPtr& msg)
 {
-    sonar.set_max_range(msg->data);
+    sonar.setMaxRange(msg->data);
 }
 
 //// Open camera for recording
@@ -53,13 +53,13 @@ void EnableSonarLoggingCallback(const std_msgs::Bool::ConstPtr& msg)
 {
     logging_enabled_ = msg->data;
 
-    sonar.SonarLogEnable(msg->data);
+    sonar.setSonarLogEnable(msg->data);
     if (logging_enabled_)
     {
         // Generate the avi file name
-        video_filename_ = sonar.current_sonar_file() + ".avi";
-        log_filename_ = sonar.current_sonar_file() + ".txt";
-        notes_filename_ = sonar.current_sonar_file() + ".notes";
+        video_filename_ = sonar.getCurrentSonarFileName() + ".avi";
+        log_filename_ = sonar.getCurrentSonarFileName() + ".txt";
+        notes_filename_ = sonar.getCurrentSonarFileName() + ".notes";
         log_frame_num_ = 0;
     }
     else
@@ -94,24 +94,24 @@ int main(int argc, char **argv)
     nh.getParam("max_dist", max_dist);
 
     // Set sonar range
-    sonar.set_range(min_dist, max_dist);
+    sonar.setRange(min_dist, max_dist);
 
     // Grab mode (image or range)
     std::string mode;
     nh.getParam("mode", mode);
     if (mode == "range")
     {
-        sonar.set_data_mode(Sonar::range);
+        sonar.setDataMode(Sonar::range);
     }
     else
     {
-        sonar.set_data_mode(Sonar::image);
+        sonar.setDataMode(Sonar::image);
     }
 
     // Grab color map filename
     std::string color_map;
     nh.getParam("color_map", color_map);
-    sonar.set_color_map(color_map);
+    sonar.setColorMap(color_map);
 
     //  // Grab sonar save directory
     // //  std::string save_directory;
@@ -142,14 +142,14 @@ int main(int argc, char **argv)
     if (net_or_file == "net")
     {
         nh.getParam("ip_addr", ip_addr);
-        sonar.set_mode(Sonar::net);
-        sonar.set_ip_addr(ip_addr);
+        sonar.setMode(Sonar::net);
+        sonar.setIpAddr(ip_addr);
     }
     else
     {
         nh.getParam("sonar_file", sonar_file);
-        sonar.set_mode(Sonar::sonar_file);
-        sonar.set_input_son_filename(sonar_file);
+        sonar.setMode(Sonar::sonar_file);
+        sonar.setInputSonFilename(sonar_file);
     }
 
     // Initialize the sonar

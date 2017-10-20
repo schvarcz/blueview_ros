@@ -23,7 +23,7 @@ Sonar::~Sonar()
         BVTSonar_Destroy(son_);
 
     // Close logging file
-    this->SonarLogEnable(false);
+    this->setSonarLogEnable(false);
 #endif
 }
 
@@ -145,7 +145,7 @@ Sonar::Status_t Sonar::init()
     printf("BVTHead_GetPingCount: %d\n", pings_);
 
     // Set the range window
-    this->set_range(min_range_, max_range_);
+    this->setRange(min_range_, max_range_);
 
     initialized_ = true;
 
@@ -174,10 +174,10 @@ void Sonar::setFrameNum(int num)
 int Sonar::reset()
 {
     cur_ping_ = 0;
-    return 0;
+    return cur_ping_;
 }
 
-Sonar::Status_t Sonar::SonarLogEnable(bool enable)
+Sonar::Status_t Sonar::setSonarLogEnable(bool enable)
 {
     // Whether enable is true or false, if we enter the function here,
     // we should properly close the current file if currently logging
@@ -395,27 +395,27 @@ int Sonar::height()
     return height_;
 }
 
-void Sonar::set_mode(SonarMode_t mode)
+void Sonar::setMode(SonarMode_t mode)
 {
     mode_ = mode;
 }
 
-void Sonar::set_data_mode(DataMode_t data_mode)
+void Sonar::setDataMode(DataMode_t data_mode)
 {
     data_mode_ = data_mode;
 }
 
-void Sonar::set_ip_addr(const std::string &ip_addr)
+void Sonar::setIpAddr(const std::string &ip_addr)
 {
     ip_addr_ = ip_addr;
 }
 
-void Sonar::set_input_son_filename(const std::string &fn)
+void Sonar::setInputSonFilename(const std::string &fn)
 {
     fn_ = fn;
 }
 
-void Sonar::set_range(double min_range, double max_range)
+void Sonar::setRange(double min_range, double max_range)
 {
     min_range_ = min_range;
     max_range_ = max_range;
@@ -429,27 +429,27 @@ void Sonar::set_range(double min_range, double max_range)
     BVTHead_SetRange(head_, min_range_, max_range_);
 }
 
-void Sonar::set_min_range(double min_range)
+void Sonar::setMinRange(double min_range)
 {
-    this->set_range(min_range, max_range_);
+    this->setRange(min_range, max_range_);
 }
 
-void Sonar::set_max_range(double max_range)
+void Sonar::setMaxRange(double max_range)
 {
-    this->set_range(min_range_, max_range);
+    this->setRange(min_range_, max_range);
 }
 
-void Sonar::set_color_map(const std::string &color_map)
+void Sonar::setColorMap(const std::string &color_map)
 {
     color_map_ = color_map;
 }
 
-void Sonar::set_save_directory(const std::string &save_directory)
+void Sonar::setSaveDirectory(const std::string &save_directory)
 {
     save_directory_ = save_directory;
 }
 
-const std::string& Sonar::current_sonar_file()
+const std::string& Sonar::getCurrentSonarFileName()
 {
     return cur_log_file_;
 }

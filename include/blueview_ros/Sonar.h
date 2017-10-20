@@ -52,18 +52,18 @@ public:
     int reset();
 
     void setFrameNum(int num);
-    void set_mode(SonarMode_t mode);
-    void set_data_mode(DataMode_t data_mode);
-    void set_ip_addr(const std::string &ip_addr);
-    void set_input_son_filename(const std::string &fn);
-    void set_range(double min_range, double max_range);
-    void set_max_range(double max_range);
-    void set_min_range(double min_range);
-    void set_color_map(const std::string &color_map);
-    void set_save_directory(const std::string &save_directory);
+    void setMode(SonarMode_t mode);
+    void setDataMode(DataMode_t data_mode);
+    void setIpAddr(const std::string &ip_addr);
+    void setInputSonFilename(const std::string &fn);
+    void setRange(double min_range, double max_range);
+    void setMinRange(double min_range);
+    void setMaxRange(double max_range);
+    void setColorMap(const std::string &color_map);
+    void setSaveDirectory(const std::string &save_directory);
 
-    Status_t SonarLogEnable(bool enable);
-    const std::string& current_sonar_file();
+    Status_t setSonarLogEnable(bool enable);
+    const std::string& getCurrentSonarFileName();
 
 
     int height();
