@@ -37,10 +37,10 @@ int main(int argc, char **argv)
     // Acquire params from paramserver
     ///////////////////////////////////////////////////
     double min_dist = 0,
-            max_dist = 20, tick_rate;
+            max_dist = 40, tick_rate = 10;
     std::string mode,
             color_map,
-            net_or_file, sonar_file, ip_addr;
+            net_or_file, address;
 
     // Grab distance range
     nh.getParam("min_dist", min_dist);
@@ -55,21 +55,16 @@ int main(int argc, char **argv)
     nh.getParam("color_map", color_map);
 
     nh.getParam("net_or_file", net_or_file);
-    nh.getParam("ip_addr", ip_addr);
-    nh.getParam("sonar_file", sonar_file);
+    nh.getParam("address", address);
 
     // Determine if a live "net" sonar will be used or if we are reading
     // from a file
     if (net_or_file == "net")
-    {
         sonar.setMode(Sonar::net);
-        sonar.setAddress(ip_addr);
-    }
     else
-    {
         sonar.setMode(Sonar::sonar_file);
-        sonar.setAddress(sonar_file);
-    }
+
+    sonar.setAddress(address);
 
     sonar.setRange(min_dist, max_dist);
     if (mode == "range")
@@ -79,11 +74,10 @@ int main(int argc, char **argv)
 
     sonar.setColorMap(color_map);
 
-
     cout << "min_dist: " << min_dist << endl;
     cout << "max_dist: " << max_dist << endl;
     cout << "color_map: " << color_map << endl;
-    cout << "sonar_file: " << sonar_file << endl;
+    cout << "address: " << address << endl;
 
     // Initialize the sonar
     sonar.init();

@@ -1,15 +1,16 @@
 <launch>
-  <node pkg="blueview_ros" name="blueview_ros_image" type="blueview_ros_node" output="screen">
-    <param name="tick_rate" type="double" value="10.0" />
-    <param name="net_or_file" type="string" value="file" />
-    <param name="ip_addr" type="string" value="0.0.0.0" />
-    <param name="sonar_file" type="string" value="/home/schvarcz/Desktop/sonar_guerledan/Oct_13_2017_120410.son" />
-    <param name="min_dist" type="double" value="0" />
-    <param name="max_dist" type="double" value="40" />
-    <param name="mode" type="string" value="image" />
-    <param name="color_map" type="string" value="$(find blueview_ros)/colormaps/jet.cmap" />
-  </node>
+    <arg name="sonar_address" default="/home/schvarcz/Desktop/sonar_guerledan/Oct_13_2017_120410.son" />
+    <arg name="color_map_file" default="$(find blueview_ros)/colormaps/jet.cmap" />
 
-  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find blueview_ros)/config/rviz.rviz" />
-  <!--<node pkg="image_view" name="image_view_sonar" type="image_view" args="image:=sonar_image"/>-->
+    <node pkg="blueview_ros" name="blueview_ros_image" type="blueview_ros_node" output="screen">
+        <param name="address" type="string" value="$(arg sonar_address)" /> <!-- if net, ip address : if file, path -->
+        <param name="net_or_file" type="string" value="file" /> <!-- file or net -->
+        <param name="mode" type="string" value="image" /> <!-- useless for while -->
+        <param name="color_map" type="string" value="$(arg color_map_file)" />
+        <param name="tick_rate" type="double" value="10.0" />
+        <param name="max_dist" type="double" value="40" />
+        <param name="min_dist" type="double" value="0" />
+    </node>
+
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find blueview_ros)/config/rviz.rviz" />
 </launch>
