@@ -11,7 +11,7 @@ using std::endl;
 Sonar::Sonar()
     : initialized_(false), addr_(""), logging_(false),
       mode_(Sonar::net), data_mode_(Sonar::image), min_range_(0),
-      max_range_(40), color_map_(""), save_directory_("./")
+      max_range_(40), color_map_(""), save_directory_("./"), threshold_(1000)
 {
 }
 
@@ -464,6 +464,17 @@ double Sonar::getRangeResolution()
 {
     BVTPing_GetRangeData( ping_, range_ );
     return range_.GetRangeResolution();
+}
+
+double Sonar::getThresholdRangeData()
+{
+    return threshold_;
+}
+
+void Sonar::setThresholdRangeData(double threshold)
+{
+    threshold_ = threshold;
+    BVTHead_SetRangeDataThreshold(head_ , threshold_);
 }
 
 Sonar::SonarMode_t Sonar::getMode()

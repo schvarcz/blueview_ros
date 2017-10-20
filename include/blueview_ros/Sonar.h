@@ -56,6 +56,9 @@ public:
     void setRange(double min_range, double max_range);
     double getRangeResolution();
 
+    double getThresholdRangeData();
+    void setThresholdRangeData(double threshold);
+
     SonarMode_t getMode();
     void setMode(SonarMode_t mode);
 
@@ -111,6 +114,7 @@ protected:
 
     double min_range_;
     double max_range_;
+    double threshold_;
 
     int height_;
     int width_;

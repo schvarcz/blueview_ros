@@ -29,6 +29,11 @@ void MaxRangeCallback(const std_msgs::Float32::ConstPtr& msg)
     sonar.setMaxRange(msg->data);
 }
 
+void ThresRangeCallback(const std_msgs::Float32::ConstPtr& msg)
+{
+    sonar.setThresholdRangeData(msg->data);
+}
+
 sensor_msgs::PointCloud cv2pointCloud(cv::Mat image)
 {
     sensor_msgs::PointCloud pc_msg;
@@ -37,7 +42,7 @@ sensor_msgs::PointCloud cv2pointCloud(cv::Mat image)
 
     cv::Mat img, gray, pts;
     image.convertTo(img, CV_32F);
-    cv::threshold(img, gray, 1000, 255, cv::THRESH_BINARY);
+    cv::threshold(img, gray, sonar.getThresholdRangeData(), 255, cv::THRESH_BINARY);
     gray.convertTo(gray, CV_8U);
     cv::findNonZero(gray, pts);
 
@@ -77,16 +82,17 @@ int main(int argc, char **argv)
     // Acquire params from paramserver
     ///////////////////////////////////////////////////
     double min_dist = 0,
-            max_dist = 40, tick_rate = 10;
+            max_dist = 40, tick_rate = 10, threshold = 1000;
     std::string mode,
             color_map,
             net_or_file, address;
 
     // Grab distance range
     nh.getParam("min_dist", min_dist);
-    nh.getParam("tick_rate", tick_rate);
-
     nh.getParam("max_dist", max_dist);
+
+    nh.getParam("tick_rate", tick_rate);
+    nh.getParam("threshold", threshold);
 
     // Grab mode (image or range)
     nh.getParam("mode", mode);
@@ -97,8 +103,7 @@ int main(int argc, char **argv)
     nh.getParam("net_or_file", net_or_file);
     nh.getParam("address", address);
 
-    // Determine if a live "net" sonar will be used or if we are reading
-    // from a file
+    // Determine if a live "net" sonar will be used or if we are reading from a file
     if (net_or_file == "net")
         sonar.setMode(Sonar::net);
     else
@@ -113,6 +118,7 @@ int main(int argc, char **argv)
         sonar.setDataMode(Sonar::image);
 
     sonar.setColorMap(color_map);
+    sonar.setThresholdRangeData(threshold);
 
     cout << "min_dist: " << min_dist << endl;
     cout << "max_dist: " << max_dist << endl;
@@ -132,9 +138,9 @@ int main(int argc, char **argv)
     //Subscribe to range commands
     ros::Subscriber min_range_sub = nh.subscribe("sonar_min_range", 1, MinRangeCallback);
     ros::Subscriber max_range_sub = nh.subscribe("sonar_max_range", 1, MaxRangeCallback);
+    ros::Subscriber thres_range_sub = nh.subscribe("threshold_range_data", 1, ThresRangeCallback);
 
     tf::TransformBroadcaster tf_broadcaster;
-
 
     // cv bridge static settings:
     cv_bridge::CvImage cvi;
