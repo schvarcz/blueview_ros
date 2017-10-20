@@ -116,6 +116,7 @@ int main(int argc, char **argv)
     msg_laser.range_max = sonar.getRangeMax();
 
     ros::Time ros_time;
+    ros::Rate rate(tick_rate);
 
     cv::Mat img;
     std::vector<double> ranges;
@@ -149,6 +150,7 @@ int main(int argc, char **argv)
         }
 
         ros::spinOnce();
+        rate.sleep();
     }
 
     return 0;
