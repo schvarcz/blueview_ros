@@ -9,7 +9,7 @@ using std::cout;
 using std::endl;
 
 Sonar::Sonar()
-    : initialized_(false), fn_(""), ip_addr_(""), logging_(false),
+    : initialized_(false), addr_(""), logging_(false),
       mode_(Sonar::net), data_mode_(Sonar::image), min_range_(0),
       max_range_(40), color_map_(""), save_directory_("./")
 {
@@ -55,18 +55,13 @@ Sonar::Status_t Sonar::init()
         // If the ip address string is set, try to manually connect
         // to sonar first.
         bool manual_sonar_found = false;
-        if (ip_addr_ != "" && ip_addr_ != "0.0.0.0")
+        if (addr_ != "" && addr_ != "0.0.0.0")
         {
-            ret = BVTSonar_Open(son_, "NET", ip_addr_.c_str());
+            ret = BVTSonar_Open(son_, "NET", addr_.c_str());
             if( ret != 0 )
-            {
-                printf("Couldn't find sonar at defined IP address: %s",
-                       ip_addr_.c_str());
-            }
+                printf("Couldn't find sonar at defined IP address: %s", addr_.c_str());
             else
-            {
                 manual_sonar_found = true;
-            }
         }
 
 #if (BVTSDK_VERSION >= 4)
@@ -119,7 +114,7 @@ Sonar::Status_t Sonar::init()
         /////////////////////////////////////////
 
         // Open the sonar
-        ret = BVTSonar_Open(son_, "FILE", fn_.c_str());
+        ret = BVTSonar_Open(son_, "FILE", addr_.c_str());
         if (ret != 0 )
         {
             printf("BVTSonar_Open: ret=%d\n", ret);
@@ -348,6 +343,13 @@ Sonar::Status_t Sonar::getSonarScan(std::vector<double> &ranges)
     return status;
 }
 
+
+int Sonar::reset()
+{
+    cur_ping_ = 0;
+    return cur_ping_;
+}
+
 int Sonar::getNumPings()
 {
     return pings_;
@@ -358,15 +360,9 @@ int Sonar::getCurrentPingNum()
     return cur_ping_;
 }
 
-void Sonar::setFrameNum(int num)
+void Sonar::setPingNum(int num)
 {
     cur_ping_ = num;
-}
-
-int Sonar::reset()
-{
-    cur_ping_ = 0;
-    return cur_ping_;
 }
 
 double Sonar::getBearingMinAngle()
@@ -392,45 +388,19 @@ double Sonar::getRangeMin()
     return BVTHead_GetMinimumRange(head_);
 }
 
+void Sonar::setMinRange(double min_range)
+{
+    this->setRange(min_range, max_range_);
+}
+
 double Sonar::getRangeMax()
 {
     return BVTHead_GetMaximumRange(head_);
 }
 
-double Sonar::getRangeResolution()
+void Sonar::setMaxRange(double max_range)
 {
-    BVTPing_GetRangeData( ping_, range_ );
-    return range_.GetRangeResolution();
-}
-
-int Sonar::width()
-{
-    return width_;
-}
-
-int Sonar::height()
-{
-    return height_;
-}
-
-void Sonar::setMode(SonarMode_t mode)
-{
-    mode_ = mode;
-}
-
-void Sonar::setDataMode(DataMode_t data_mode)
-{
-    data_mode_ = data_mode;
-}
-
-void Sonar::setIpAddr(const std::string &ip_addr)
-{
-    ip_addr_ = ip_addr;
-}
-
-void Sonar::setInputSonFilename(const std::string &fn)
-{
-    fn_ = fn;
+    this->setRange(min_range_, max_range);
 }
 
 void Sonar::setRange(double min_range, double max_range)
@@ -447,19 +417,55 @@ void Sonar::setRange(double min_range, double max_range)
     BVTHead_SetRange(head_, min_range_, max_range_);
 }
 
-void Sonar::setMinRange(double min_range)
+double Sonar::getRangeResolution()
 {
-    this->setRange(min_range, max_range_);
+    BVTPing_GetRangeData( ping_, range_ );
+    return range_.GetRangeResolution();
 }
 
-void Sonar::setMaxRange(double max_range)
+Sonar::SonarMode_t Sonar::getMode()
 {
-    this->setRange(min_range_, max_range);
+    return mode_;
+}
+
+void Sonar::setMode(SonarMode_t mode)
+{
+    mode_ = mode;
+}
+
+Sonar::DataMode_t Sonar::getDataMode()
+{
+    return data_mode_;
+}
+
+void Sonar::setDataMode(DataMode_t data_mode)
+{
+    data_mode_ = data_mode;
+}
+
+std::string Sonar::getAddress()
+{
+    return addr_;
+}
+
+void Sonar::setAddress(const std::string &address)
+{
+    addr_ = address;
+}
+
+std::string Sonar::getColorMap()
+{
+    return color_map_;
 }
 
 void Sonar::setColorMap(const std::string &color_map)
 {
     color_map_ = color_map;
+}
+
+std::string Sonar::getSaveDirectory()
+{
+    return save_directory_;
 }
 
 void Sonar::setSaveDirectory(const std::string &save_directory)
@@ -470,4 +476,14 @@ void Sonar::setSaveDirectory(const std::string &save_directory)
 const std::string& Sonar::getCurrentSonarFileName()
 {
     return cur_log_file_;
+}
+
+int Sonar::width()
+{
+    return width_;
+}
+
+int Sonar::height()
+{
+    return height_;
 }

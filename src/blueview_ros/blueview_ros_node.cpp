@@ -32,7 +32,6 @@ int main(int argc, char **argv)
     ros::NodeHandle nh("~");
 
 
-
     ///////////////////////////////////////////////////
     // Acquire params from paramserver
     ///////////////////////////////////////////////////
@@ -58,20 +57,17 @@ int main(int argc, char **argv)
     nh.getParam("ip_addr", ip_addr);
     nh.getParam("sonar_file", sonar_file);
 
-
-
     // Determine if a live "net" sonar will be used or if we are reading
     // from a file
-
     if (net_or_file == "net")
     {
         sonar.setMode(Sonar::net);
-        sonar.setIpAddr(ip_addr);
+        sonar.setAddress(ip_addr);
     }
     else
     {
         sonar.setMode(Sonar::sonar_file);
-        sonar.setInputSonFilename(sonar_file);
+        sonar.setAddress(sonar_file);
     }
 
     sonar.setRange(min_dist, max_dist);
