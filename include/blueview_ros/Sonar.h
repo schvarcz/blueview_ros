@@ -62,9 +62,6 @@ public:
     SonarMode_t getMode();
     void setMode(SonarMode_t mode);
 
-    DataMode_t getDataMode();
-    void setDataMode(DataMode_t data_mode);
-
     std::string getAddress();
     void setAddress(const std::string &address);
 
@@ -86,7 +83,6 @@ protected:
     bool logging_;
 
     SonarMode_t mode_;
-    DataMode_t data_mode_;
 
     std::string cur_log_file_;
     std::string save_directory_;

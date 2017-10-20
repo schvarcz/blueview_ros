@@ -10,7 +10,7 @@ using std::endl;
 
 Sonar::Sonar()
     : initialized_(false), addr_(""), logging_(false),
-      mode_(Sonar::net), data_mode_(Sonar::image), min_range_(0),
+      mode_(Sonar::net), min_range_(0),
       max_range_(40), color_map_(""), save_directory_("./"), threshold_(1000)
 {
 }
@@ -485,16 +485,6 @@ Sonar::SonarMode_t Sonar::getMode()
 void Sonar::setMode(SonarMode_t mode)
 {
     mode_ = mode;
-}
-
-Sonar::DataMode_t Sonar::getDataMode()
-{
-    return data_mode_;
-}
-
-void Sonar::setDataMode(DataMode_t data_mode)
-{
-    data_mode_ = data_mode;
 }
 
 std::string Sonar::getAddress()

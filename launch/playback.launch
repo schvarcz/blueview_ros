@@ -5,7 +5,10 @@
     <node pkg="blueview_ros" name="blueview_ros_image" type="blueview_ros_node" output="screen">
         <param name="address" type="string" value="$(arg sonar_address)" /> <!-- if net, ip address : if file, path -->
         <param name="net_or_file" type="string" value="file" /> <!-- file or net -->
-        <param name="mode" type="string" value="image" /> <!-- useless for while -->
+        <param name="enable_range_data" type="bool" value="true" />
+        <param name="enable_gray_image" type="bool" value="true" />
+        <param name="enable_colored_image" type="bool" value="true" />
+        <param name="enable_point_cloud" type="bool" value="true" />
         <param name="color_map" type="string" value="$(arg color_map_file)" />
         <param name="tick_rate" type="double" value="10.0" />
         <param name="max_dist" type="double" value="40" />

@@ -83,9 +83,9 @@ int main(int argc, char **argv)
     ///////////////////////////////////////////////////
     double min_dist = 0,
             max_dist = 40, tick_rate = 10, threshold = 1000;
-    std::string mode,
-            color_map,
+    std::string color_map,
             net_or_file, address;
+    bool enable_range_data = false, enable_gray_image = false, enable_colored_image = false, enable_point_cloud = false;
 
     // Grab distance range
     nh.getParam("min_dist", min_dist);
@@ -95,7 +95,10 @@ int main(int argc, char **argv)
     nh.getParam("threshold", threshold);
 
     // Grab mode (image or range)
-    nh.getParam("mode", mode);
+    nh.getParam("enable_range_data", enable_range_data);
+    nh.getParam("enable_gray_image", enable_gray_image);
+    nh.getParam("enable_colored_image", enable_colored_image);
+    nh.getParam("enable_point_cloud", enable_point_cloud);
 
     // Grab color map filename
     nh.getParam("color_map", color_map);
@@ -112,28 +115,25 @@ int main(int argc, char **argv)
     sonar.setAddress(address);
 
     sonar.setRange(min_dist, max_dist);
-    if (mode == "range")
-        sonar.setDataMode(Sonar::range);
-    else
-        sonar.setDataMode(Sonar::image);
 
     sonar.setColorMap(color_map);
     sonar.setThresholdRangeData(threshold);
-
-    cout << "min_dist: " << min_dist << endl;
-    cout << "max_dist: " << max_dist << endl;
-    cout << "color_map: " << color_map << endl;
-    cout << "address: " << address << endl;
 
     // Initialize the sonar
     sonar.init();
 
     //Publish opencv image of sonar
     image_transport::ImageTransport it(n);
-    image_transport::Publisher image_pub = it.advertise("sonar_image", 1);
-    image_transport::Publisher image_pub_colored = it.advertise("sonar_image_colored", 1);
-    ros::Publisher scan_pub = n.advertise<sensor_msgs::LaserScan>("scan", 1);
-    ros::Publisher pc_pub = n.advertise<sensor_msgs::PointCloud>("point_cloud", 1);
+    image_transport::Publisher image_pub, image_pub_colored;
+    ros::Publisher scan_pub, pc_pub;
+    if (enable_gray_image)
+        image_pub = it.advertise("sonar_image", 1);
+    if (enable_colored_image)
+        image_pub_colored = it.advertise("sonar_image_colored", 1);
+    if (enable_range_data)
+        scan_pub = n.advertise<sensor_msgs::LaserScan>("scan", 1);
+    if (enable_point_cloud)
+        pc_pub = n.advertise<sensor_msgs::PointCloud>("point_cloud", 1);
 
     //Subscribe to range commands
     ros::Subscriber min_range_sub = nh.subscribe("sonar_min_range", 1, MinRangeCallback);
@@ -166,67 +166,84 @@ int main(int argc, char **argv)
     while (ros::ok())
     {
         status = sonar.getNextSonarData();
-        status = sonar.getSonarImage(img);
-        status = sonar.getSonarColoredImage(imgColored);
-        status = sonar.getSonarScan(ranges);
+
+        if (enable_gray_image || enable_point_cloud)
+            status = sonar.getSonarImage(img);
+
+        if (enable_colored_image)
+            status = sonar.getSonarColoredImage(imgColored);
+
+        if (enable_range_data)
+            status = sonar.getSonarScan(ranges);
+
         if (status == Sonar::Success)
         {
             try
             {
                 current_time = ros::Time::now();
 
-                // convert OpenCV image to ROS message
-                cvi.header.stamp = current_time;
-                cvi.image = img;
-                cvi.toImageMsg(msg_img);
+                // Publish the images
+                if (enable_gray_image)
+                {
+                    cvi.header.stamp = current_time;
+                    cvi.image = img;
+                    cvi.toImageMsg(msg_img);
+                    image_pub.publish(msg_img);
+                }
 
-                cvic.header.stamp = current_time;
-                cvic.image = imgColored;
-                cvic.toImageMsg(msg_img_colored);
-
-                // Publish the image
-                image_pub.publish(msg_img);
-                image_pub_colored.publish(msg_img_colored);
+                if (enable_colored_image)
+                {
+                    cvic.header.stamp = current_time;
+                    cvic.image = imgColored;
+                    cvic.toImageMsg(msg_img_colored);
+                    image_pub_colored.publish(msg_img_colored);
+                }
 
                 //Publish Range Data
-                msg_laser.header.stamp = current_time;
-                msg_laser.angle_min = sonar.getBearingMinAngle()*M_PI/180.;
-                msg_laser.angle_max = sonar.getBearingMaxAngle()*M_PI/180.;
-                msg_laser.angle_increment = sonar.getBearingResolution()*M_PI/180.;
-                msg_laser.range_min = sonar.getRangeMin();
-                msg_laser.range_max = sonar.getRangeMax();
+                if (enable_range_data)
+                {
+                    msg_laser.header.stamp = current_time;
+                    msg_laser.angle_min = sonar.getBearingMinAngle()*M_PI/180.;
+                    msg_laser.angle_max = sonar.getBearingMaxAngle()*M_PI/180.;
+                    msg_laser.angle_increment = sonar.getBearingResolution()*M_PI/180.;
+                    msg_laser.range_min = sonar.getRangeMin();
+                    msg_laser.range_max = sonar.getRangeMax();
 
-                msg_laser.ranges.clear();
-                msg_laser.ranges.insert(msg_laser.ranges.begin(), ranges.begin(),ranges.end());
-                scan_pub.publish(msg_laser);
+                    msg_laser.ranges.clear();
+                    msg_laser.ranges.insert(msg_laser.ranges.begin(), ranges.begin(),ranges.end());
+                    scan_pub.publish(msg_laser);
 
-                geometry_msgs::TransformStamped range_trans;
-                range_trans.header.stamp = current_time;
-                range_trans.header.frame_id = "base_link";
-                range_trans.child_frame_id = "bv_rangedata";
+                    geometry_msgs::TransformStamped range_trans;
+                    range_trans.header.stamp = current_time;
+                    range_trans.header.frame_id = "base_link";
+                    range_trans.child_frame_id = "bv_rangedata";
 
-                range_trans.transform.translation.x = 0.0;
-                range_trans.transform.translation.y = 0.0;
-                range_trans.transform.translation.z = 0.0;
-                range_trans.transform.rotation = tf::createQuaternionMsgFromYaw(0);
-                tf_broadcaster.sendTransform(range_trans);
+                    range_trans.transform.translation.x = 0.0;
+                    range_trans.transform.translation.y = 0.0;
+                    range_trans.transform.translation.z = 0.0;
+                    range_trans.transform.rotation = tf::createQuaternionMsgFromYaw(0);
+                    tf_broadcaster.sendTransform(range_trans);
+                }
 
                 //Publish Point Cloud
-                pc_msg = cv2pointCloud(img);
-                pc_msg.header.stamp = current_time;
-                pc_msg.header.frame_id = "bv_pointcloud";
-                pc_pub.publish(pc_msg);
+                if (enable_point_cloud)
+                {
+                    pc_msg = cv2pointCloud(img);
+                    pc_msg.header.stamp = current_time;
+                    pc_msg.header.frame_id = "bv_pointcloud";
+                    pc_pub.publish(pc_msg);
 
-                geometry_msgs::TransformStamped pc_trans;
-                pc_trans.header.stamp = current_time;
-                pc_trans.header.frame_id = "base_link";
-                pc_trans.child_frame_id = "bv_pointcloud";
+                    geometry_msgs::TransformStamped pc_trans;
+                    pc_trans.header.stamp = current_time;
+                    pc_trans.header.frame_id = "base_link";
+                    pc_trans.child_frame_id = "bv_pointcloud";
 
-                pc_trans.transform.translation.x = 0.0;
-                pc_trans.transform.translation.y = 0.0;
-                pc_trans.transform.translation.z = 0.0;
-                pc_trans.transform.rotation = tf::createQuaternionMsgFromYaw(0);
-                tf_broadcaster.sendTransform(pc_trans);
+                    pc_trans.transform.translation.x = 0.0;
+                    pc_trans.transform.translation.y = 0.0;
+                    pc_trans.transform.translation.z = 0.0;
+                    pc_trans.transform.rotation = tf::createQuaternionMsgFromYaw(0);
+                    tf_broadcaster.sendTransform(pc_trans);
+                }
 
             } catch (cv_bridge::Exception& e) {
                 ROS_ERROR("cv_bridge exception: %s", e.what());
