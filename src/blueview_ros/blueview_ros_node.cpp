@@ -84,7 +84,7 @@ int main(int argc, char **argv)
     double min_dist = 0,
             max_dist = 40, tick_rate = 10, threshold = 1000;
     std::string color_map,
-            net_or_file, address;
+            net_or_file, address, base_link_name = "base_link";
     bool enable_range_data = false, enable_gray_image = false, enable_colored_image = false, enable_point_cloud = false;
 
     // Grab distance range
@@ -105,6 +105,8 @@ int main(int argc, char **argv)
 
     nh.getParam("net_or_file", net_or_file);
     nh.getParam("address", address);
+
+    nh.getParam("base_link_name", base_link_name);
 
     // Determine if a live "net" sonar will be used or if we are reading from a file
     if (net_or_file == "net")
@@ -154,8 +156,8 @@ int main(int argc, char **argv)
     sensor_msgs::Image msg_img, msg_img_colored;
     sensor_msgs::LaserScan msg_laser;
     sensor_msgs::PointCloud pc_msg;
-    msg_laser.header.frame_id = "bv_rangedata";
-    pc_msg.header.frame_id = "bv_pointcloud";
+    msg_laser.header.frame_id = base_link_name+"_bv_rangedata";
+    pc_msg.header.frame_id = base_link_name+"_bv_pointcloud";
 
     ros::Time current_time;
     ros::Rate rate(tick_rate);
@@ -215,8 +217,8 @@ int main(int argc, char **argv)
 
                     geometry_msgs::TransformStamped range_trans;
                     range_trans.header.stamp = current_time;
-                    range_trans.header.frame_id = "base_link";
-                    range_trans.child_frame_id = "bv_rangedata";
+                    range_trans.header.frame_id = base_link_name;
+                    range_trans.child_frame_id = base_link_name+"_bv_rangedata";
 
                     range_trans.transform.translation.x = 0.0;
                     range_trans.transform.translation.y = 0.0;
@@ -230,13 +232,13 @@ int main(int argc, char **argv)
                 {
                     pc_msg = cv2pointCloud(img);
                     pc_msg.header.stamp = current_time;
-                    pc_msg.header.frame_id = "bv_pointcloud";
+                    pc_msg.header.frame_id = base_link_name+"_bv_pointcloud";
                     pc_pub.publish(pc_msg);
 
                     geometry_msgs::TransformStamped pc_trans;
                     pc_trans.header.stamp = current_time;
-                    pc_trans.header.frame_id = "base_link";
-                    pc_trans.child_frame_id = "bv_pointcloud";
+                    pc_trans.header.frame_id = base_link_name;
+                    pc_trans.child_frame_id = base_link_name+"_bv_pointcloud";
 
                     pc_trans.transform.translation.x = 0.0;
                     pc_trans.transform.translation.y = 0.0;
