@@ -7,7 +7,7 @@ Panels:
         - /Global Options1
         - /Status1
         - /LaserScan1
-        - /PointCloud1
+        - /Image2
       Splitter Ratio: 0.5
     Tree Height: 370
   - Class: rviz/Selection
@@ -75,14 +75,14 @@ Visualization Manager:
       Size (Pixels): 3
       Size (m): 0.100000001
       Style: Squares
-      Topic: /Test/scan
+      Topic: /scan
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
     - Class: rviz/Image
       Enabled: true
-      Image Topic: /Test/sonar_image
+      Image Topic: /sonar_image
       Max Value: 1
       Median window: 5
       Min Value: 0
@@ -107,9 +107,9 @@ Visualization Manager:
       Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
-      Max Intensity: -999999
+      Max Intensity: 1136
       Min Color: 0; 0; 0
-      Min Intensity: 999999
+      Min Intensity: 1003
       Name: PointCloud
       Position Transformer: XYZ
       Queue Size: 10
@@ -117,14 +117,14 @@ Visualization Manager:
       Size (Pixels): 3
       Size (m): 0.0500000007
       Style: Flat Squares
-      Topic: /Test/point_cloud
+      Topic: /point_cloud
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
     - Class: rviz/Image
       Enabled: true
-      Image Topic: /Test/sonar_image_colored
+      Image Topic: /sonar_image_colored
       Max Value: 1
       Median window: 5
       Min Value: 0
