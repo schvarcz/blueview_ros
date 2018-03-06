@@ -40,6 +40,9 @@ public:
     Status_t getSonarColoredImage(cv::Mat &image);
     Status_t getSonarScan(std::vector<double> &ranges);
 
+    double getTimeStamp();
+    double getTimeZoneOffset();
+
     int reset();
     int getNumPings();
     int getCurrentPingNum();

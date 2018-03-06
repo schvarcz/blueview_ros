@@ -386,6 +386,15 @@ Sonar::Status_t Sonar::getSonarScan(std::vector<double> &ranges)
     return status;
 }
 
+double Sonar::getTimeStamp()
+{
+    return BVTPing_GetTimestamp(ping_);
+}
+
+double Sonar::getTimeZoneOffset()
+{
+    return BVTPing_GetTimeZoneOffset(ping_);
+}
 
 int Sonar::reset()
 {
