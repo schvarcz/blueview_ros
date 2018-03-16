@@ -4,10 +4,13 @@
 #define ENABLE_SONAR 1
 
 #include <opencv2/opencv.hpp>
+#include <iostream>
 
 #if ENABLE_SONAR == 1
 #include <bvt_sdk.h>
 #endif
+
+namespace blueview {
 
 class Sonar
 {
@@ -97,14 +100,13 @@ protected:
     BVTPing ping_;
     BVTSDK::RangeData range_;
 
-    std::string color_map_;
 
     // Sonar file save / logger members
     BVTSonar son_logger_;
     BVTHead out_head_;
-    std::vector<double> ranges_;
-
 #endif
+    std::string color_map_;
+    std::vector<double> ranges_;
 
     int heads_;
     int pings_;
@@ -119,4 +121,5 @@ protected:
     int width_;
 };
 
+}
 #endif

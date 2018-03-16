@@ -5,32 +5,43 @@ project(blueview_ros)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
+  cv_bridge
+  image_transport
   tf
   roscpp
   std_msgs
-  image_transport
-  cv_bridge
   sensor_msgs
 )
 
-# Determine if the BLUEVIEW_SDK_ROOT has been set
-message("==================================")
-if (DEFINED ENV{BLUEVIEW_SDK_ROOT})
-  message("Found Blueview SDK at:")
-  message("$ENV{BLUEVIEW_SDK_ROOT}")
-else()
-  message("WARNING: Can't find the BlueView SDK")
-  message("Set the BLUEVIEW_SDK_ROOT environment variable in your .bashrc")
-  message("if you require the blueview_ros library")
-  message("")
-  return() # exit quietly if sdk not found
-endif()
 
-# Include the BLUEVIW SDK header files
+## Determine if the BLUEVIEW_SDK_ROOT has been set
+#message("==================================")
+#if (DEFINED ENV{BLUEVIEW_SDK_ROOT})
+#  message("Found Blueview SDK at:")
+#  message("$ENV{BLUEVIEW_SDK_ROOT}")
+#else()
+#  message("WARNING: Can't find the BlueView SDK")
+#  message("Set the BLUEVIEW_SDK_ROOT environment variable in your .bashrc")
+#  message("if you require the blueview_ros library")
+#  message("")
+#  return() # exit quietly if sdk not found
+#endif()
+
+## Declare a cpp library
+set( LIB_NAME "blueview_ros" )
+
+## Include the BLUEVIW SDK header files
 include_directories($ENV{BLUEVIEW_SDK_ROOT}/include)
 
-# Set the Blueview SDK libraries
+## Set the Blueview SDK libraries
 set(BLUEVIEW_SDK_LIBS $ENV{BLUEVIEW_SDK_ROOT}/lib/libbvtsdk.so)
+
+catkin_package(
+INCLUDE_DIRS include $ENV{BLUEVIEW_SDK_ROOT}/include
+LIBRARIES ${LIB_NAME}
+ CATKIN_DEPENDS cv_bridge image_transport message_runtime sensor_msgs
+ #  DEPENDS system_lib
+)
 
 find_package(OpenCV)
 
@@ -106,15 +117,6 @@ message("${OpenCV_INCLUDE_DIRS}")
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 
-# Declare a cpp library
-set( LIB_NAME "blueview_ros" )
-
-catkin_package(
-INCLUDE_DIRS include $ENV{BLUEVIEW_SDK_ROOT}/include
-LIBRARIES ${LIB_NAME}
-# CATKIN_DEPENDS cv_bridge image_transport sensor_msgs
-#  DEPENDS system_lib
-)
 
 ###########
 ## Build ##
@@ -130,27 +132,27 @@ include_directories(
 
 add_library(${LIB_NAME}
   src/${PROJECT_NAME}/Sonar.cpp
-  )
+)
 
 ## Declare a cpp executable
 add_executable(blueview_ros_node src/blueview_ros/blueview_ros_node.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
-add_dependencies(blueview_ros_node ${catkin_EXPORTED_TARGETS}  ${${PROJECT_NAME}_EXPORTED_TARGETS})
+add_dependencies(blueview_ros_node ${catkin_EXPORTED_TARGETS} ${${PROJECT_NAME}_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
- target_link_libraries(${LIB_NAME}
-  #  ${catkin_LIBRARIES}
+target_link_libraries(${LIB_NAME}
+   ${catkin_LIBRARIES}
    ${OpenCV_LIBRARIES}
    ${BLUEVIEW_SDK_LIBS}
- )
+)
 
- target_link_libraries(blueview_ros_node
-   ${catkin_LIBRARIES}
+target_link_libraries(blueview_ros_node
     ${LIB_NAME}
+    ${catkin_LIBRARIES}
     ${OpenCV_LIBRARIES}
- )
+)
 
 #############
 ## Install ##
