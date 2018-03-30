@@ -13,6 +13,7 @@
 #include <geometry_msgs/Point32.h>
 
 #include <math.h>
+#include "opencv2/opencv.hpp"
 
 using std::cout;
 using std::endl;
@@ -60,7 +61,7 @@ sensor_msgs::PointCloud cv2pointCloud(cv::Mat image)
         curDist *= sonar.getRangeResolution();
 
         point.x = curDist*cos(curBearing);
-        point.y = curDist*sin(curBearing);
+        point.y = -curDist*sin(curBearing);
         point.z = 0;
         pc_msg.points.push_back(point);
 
@@ -70,6 +71,176 @@ sensor_msgs::PointCloud cv2pointCloud(cv::Mat image)
     pc_msg.channels.push_back(ch_msg);
 
     return pc_msg;
+}
+
+
+void imageFilterInit()
+{
+  cv::namedWindow("control");
+  int value = 1;
+  cv::createTrackbar( "Surface", "control", &value, 10 );
+  value = 8;
+  cv::createTrackbar( "Density", "control", &value, 100);
+  value = 20;
+  cv::createTrackbar( "DensityDistance", "control", &value, 100);
+  value = 5;
+  cv::createTrackbar( "MedianWindowSize", "control", &value, 30);
+  value = 1;
+  cv::createTrackbar( "MedianThreshold", "control", &value, 100);
+  value = sonar.getThresholdRangeData();
+  cv::createTrackbar("Threshold", "control", &value, 30000 );
+  cv::waitKey(33);
+
+  cv::moveWindow("control", 2500, 400);
+}
+
+void imageFilter(cv::Mat img)
+{
+  cv::Mat mask;
+  img.convertTo(img, CV_32F);
+
+  double surface = cv::getTrackbarPos( "Surface", "control");
+  double threshold = cv::getTrackbarPos( "Threshold", "control");
+
+  double minn, maxx;
+  cv::minMaxIdx(img, &minn, &maxx);
+  cv::threshold(img, mask, threshold, 0, cv::THRESH_TOZERO);
+  cv::threshold(mask, mask, 0, 1, cv::THRESH_BINARY);
+
+  cv::circle(mask, cv::Point(img.cols/2,img.rows),surface/sonar.getRangeResolution(), cv::Scalar(0), -1);
+
+
+
+  cout << "Min: " << minn << " Max: " << maxx << endl;
+  cout << "Resolution: " << sonar.getRangeResolution() << endl;
+  cout << "ThresholdRangeData: " << threshold << endl;
+
+  img = (img-minn)/(maxx-minn);
+
+  cv::imshow("img", img);
+  cv::imshow("filtered", img.mul(mask));
+  cv::imshow("filteredmask", mask);
+  cv::waitKey(33);
+}
+
+void densityFilter(cv::Mat img, sensor_msgs::LaserScan msg_laser)
+{
+    cv::Mat ptsImg = cv::Mat::zeros(img.rows, img.cols, CV_8U);
+
+    for(int i =0; i< msg_laser.ranges.size(); i++)
+    {
+        double range = msg_laser.ranges.at(i)/sonar.getRangeResolution();
+        double angle = msg_laser.angle_min + i*msg_laser.angle_increment;
+
+        double dx = range*sin(angle), dy = range*cos(angle);
+
+        ptsImg.at<uchar>(cv::Point(img.cols/2 + dx,img.rows - dy)) = 1;
+
+    }
+
+    int kernel_size = 9;
+    cv::Mat kernel = cv::Mat::ones( kernel_size, kernel_size, CV_32F );
+
+    /// Apply filter
+    cv::filter2D(ptsImg, ptsImg, -1 , kernel);
+    cv::threshold(ptsImg, ptsImg, 8, 255, cv::THRESH_BINARY);
+    cv::imshow("Density", ptsImg);
+    cv::waitKey(33);
+}
+
+void densityFilter2(sensor_msgs::LaserScan &msg_laser)
+{
+  int densityMax = cv::getTrackbarPos( "Density", "control");
+  double densityMaxDist = ((double)cv::getTrackbarPos( "DensityDistance", "control")/10);
+  for(int i =0; i< msg_laser.ranges.size(); i++)
+  {
+    double angle = msg_laser.angle_min + i*msg_laser.angle_increment;
+    cv::Point compPt(msg_laser.ranges.at(i)*sin(angle), msg_laser.ranges.at(i)*cos(angle));
+    int density = 0;
+    for(int j =0; j< msg_laser.ranges.size(); j++)
+    {
+      angle = msg_laser.angle_min + j*msg_laser.angle_increment;
+      cv::Point curPt(msg_laser.ranges.at(j)*sin(angle), msg_laser.ranges.at(j)*cos(angle));
+
+      if (sqrt(pow(curPt.x - compPt.x,2) + pow(curPt.y - compPt.y,2)) < densityMaxDist)
+        density++;
+    }
+
+    if (density < densityMax)
+      msg_laser.ranges[i] = msg_laser.range_max;
+  }
+}
+
+void medianFilter(sensor_msgs::LaserScan &msg_laser)
+{
+  int halfWindowSize = (int)cv::getTrackbarPos( "MedianWindowSize", "control")/2;
+  double medianThreshold = ((double)cv::getTrackbarPos( "MedianThreshold", "control"))/10.;
+  for(int i =0; i< msg_laser.ranges.size(); i++)
+  {
+    std::vector<double> values;
+    for(int j=std::max(0,i-halfWindowSize); j<std::min((int)msg_laser.ranges.size(),i+halfWindowSize); j++)
+      if(msg_laser.ranges[j] != 1000)
+        values.push_back(msg_laser.ranges.at(j));
+
+    std::sort(values.begin(), values.end());
+
+    double median = values[(int)values.size()/2];
+
+    if ( abs(median-msg_laser.ranges.at(i)) > medianThreshold)
+      msg_laser.ranges[i] = 1000; //msg_laser.range_max;
+  }
+}
+
+void surfaceFilter(sensor_msgs::LaserScan &msg_laser)
+{
+  double surface = cv::getTrackbarPos( "Surface", "control");
+  for(int i =0; i< msg_laser.ranges.size(); i++)
+  {
+    if (msg_laser.ranges.at(i) < surface)
+    {
+      msg_laser.ranges.at(i) = 1000; //msg_laser->range_max;
+    }
+  }
+}
+
+cv::Mat drawScan(cv::Mat &img, sensor_msgs::LaserScan msg_laser, cv::Scalar color)
+{
+    for(int i =0; i< msg_laser.ranges.size(); i++)
+    {
+        double range = msg_laser.ranges.at(i)/sonar.getRangeResolution();
+        double angle = msg_laser.angle_min + i*msg_laser.angle_increment;
+
+        double dx = range*sin(angle), dy = range*cos(angle);
+
+        cv::circle(img, cv::Point(img.cols/2 + dx,img.rows - dy), 5, color, -1);
+
+    }
+
+    return img;
+}
+
+void plotScan(cv::Mat img, sensor_msgs::LaserScan msg_laser, cv::Scalar color)
+{
+    img.convertTo(img, CV_32F);
+    double minn, maxx;
+    cv::minMaxIdx(img, &minn, &maxx);
+    img = (img-minn)/(maxx-minn);
+    cv::Mat colored;
+    cv::cvtColor(img, colored, CV_GRAY2BGR);
+
+    for(int i =0; i< msg_laser.ranges.size(); i++)
+    {
+        double range = msg_laser.ranges.at(i)/sonar.getRangeResolution();
+        double angle = msg_laser.angle_min + i*msg_laser.angle_increment;
+
+        double dx = range*sin(angle), dy = range*cos(angle);
+
+        cv::circle(colored, cv::Point(img.cols/2 + dx,img.rows - dy), 5, color, -1);
+
+    }
+
+    cv::imshow("Ranges", colored);
+    cv::waitKey(33);
 }
 
 int main(int argc, char **argv)
@@ -132,7 +303,7 @@ int main(int argc, char **argv)
 
     // Initialize the sonar
     sonar.init();
-
+    imageFilterInit();
     //Publish opencv image of sonar
 //    image_transport::ImageTransport it(n);
 //    image_transport::Publisher image_pub, image_pub_colored;
@@ -165,8 +336,8 @@ int main(int argc, char **argv)
 //    sensor_msgs::Image msg_img, msg_img_colored;
     sensor_msgs::LaserScan msg_laser;
     sensor_msgs::PointCloud pc_msg;
-    msg_laser.header.frame_id = base_link_name+"_bv_rangedata";
-    pc_msg.header.frame_id = base_link_name+"_bv_pointcloud";
+    msg_laser.header.frame_id = base_link_name;
+    pc_msg.header.frame_id = base_link_name;
 
     ros::Time current_time;
     ros::Rate rate(tick_rate);
@@ -246,19 +417,14 @@ int main(int argc, char **argv)
                 msg_laser.range_max = sonar.getRangeMax();
 
                 msg_laser.ranges.clear();
-                msg_laser.ranges.insert(msg_laser.ranges.begin(), ranges.begin(),ranges.end());
+                msg_laser.ranges.insert(msg_laser.ranges.begin(), ranges.rbegin(),ranges.rend());
+
+                for(int i =0; i< msg_laser.ranges.size(); i++)
+                {
+//                    if(msg_laser.ranges.at(i) == 1000)
+//                        msg_laser.ranges[i] = numeric_limits<float>::nan();
+                }
                 scan_pub.publish(msg_laser);
-
-                geometry_msgs::TransformStamped range_trans;
-                range_trans.header.stamp = current_time;
-                range_trans.header.frame_id = base_link_name;
-                range_trans.child_frame_id = base_link_name+"_bv_rangedata";
-
-                range_trans.transform.translation.x = 0.0;
-                range_trans.transform.translation.y = 0.0;
-                range_trans.transform.translation.z = 0.0;
-                range_trans.transform.rotation = tf::createQuaternionMsgFromYaw(0);
-                tf_broadcaster.sendTransform(range_trans);
             }
 
             //Publish Point Cloud
@@ -266,20 +432,28 @@ int main(int argc, char **argv)
             {
                 pc_msg = cv2pointCloud(img);
                 pc_msg.header.stamp = current_time;
-                pc_msg.header.frame_id = base_link_name+"_bv_pointcloud";
+                pc_msg.header.frame_id = base_link_name;
                 pc_pub.publish(pc_msg);
-
-                geometry_msgs::TransformStamped pc_trans;
-                pc_trans.header.stamp = current_time;
-                pc_trans.header.frame_id = base_link_name;
-                pc_trans.child_frame_id = base_link_name+"_bv_pointcloud";
-
-                pc_trans.transform.translation.x = 0.0;
-                pc_trans.transform.translation.y = 0.0;
-                pc_trans.transform.translation.z = 0.0;
-                pc_trans.transform.rotation = tf::createQuaternionMsgFromYaw(0);
-                tf_broadcaster.sendTransform(pc_trans);
             }
+
+            imageFilter(img);
+            cv::Mat colored;
+            img.convertTo(img, CV_32F);
+            double minn, maxx;
+            cv::minMaxIdx(img, &minn, &maxx);
+            img = (img-minn)/(maxx-minn);
+            cv::cvtColor(img, colored, CV_GRAY2BGR);
+            drawScan(colored, msg_laser,cv::Scalar(0,0,255));
+            densityFilter2(msg_laser);
+            drawScan(colored, msg_laser,cv::Scalar(0, 255, 255));
+            medianFilter(msg_laser);
+            drawScan(colored, msg_laser,cv::Scalar(255,0,255));
+            surfaceFilter(msg_laser);
+            drawScan(colored, msg_laser,cv::Scalar(255,0,0));
+
+            cv::imshow("Ranges", colored);
+            cv::waitKey(33);
+//            densityFilter(img, msg_laser);
 
           }
 
