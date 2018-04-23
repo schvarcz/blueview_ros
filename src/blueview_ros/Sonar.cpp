@@ -9,7 +9,7 @@ using std::endl;
 Sonar::Sonar()
   : initialized_(false), addr_(""), logging_(false),
     mode_(Sonar::net), min_range_(0),
-    max_range_(40), color_map_(""), save_directory_("./"), threshold_(1000)
+    max_range_(40), color_map_(""), save_directory_("./"), threshold_(1000), filesCount(0)
 {
 }
 
@@ -112,7 +112,7 @@ Sonar::Status_t Sonar::init()
     /////////////////////////////////////////
 
     // Open the sonar
-    ret = BVTSonar_Open(son_, "FILE", addr_.c_str());
+    ret = BVTSonar_Open(son_, "FILE", (addr_+".son").c_str());
     if (ret != 0 )
     {
       printf("BVTSonar_Open: ret=%d\n", ret);
@@ -154,6 +154,63 @@ Sonar::Status_t Sonar::init()
   return Sonar::Failure;
 #endif // (ENABLE_SONAR == 1)
 
+}
+
+Sonar::Status_t Sonar::openNextFile()
+{
+    filesCount++;
+    int ret;
+    /////////////////////////////////////////
+    // Reading from sonar file
+    /////////////////////////////////////////
+
+    std::stringstream ss;
+
+    ss << addr_;
+    if(filesCount)
+      ss << "_" << filesCount;
+    ss << ".son";
+
+    std::cout << "Opening file: " << ss.str() << std::endl;
+    // Open the sonar
+    ret = BVTSonar_Open(son_, "FILE", ss.str().c_str());
+    if (ret != 0 )
+    {
+      printf("BVTSonar_Open: ret=%d\n", ret);
+      return Sonar::Failure;
+    }
+
+    // Make sure we have the right number of heads_
+    heads_ = -1;
+    heads_ = BVTSonar_GetHeadCount(son_);
+    printf("BVTSonar_GetHeadCount: %d\n", heads_);
+
+    // Get the first head
+    head_ = NULL;
+    ret = BVTSonar_GetHead(son_, 0, &head_);
+    if (ret != 0 )
+    {
+      // Some sonar heads start at 1
+      ret = BVTSonar_GetHead(son_, 1, &head_);
+      if (ret != 0)
+      {
+        printf( "BVTSonar_GetHead: ret=%d\n", ret) ;
+        return Sonar::Failure;
+      }
+    }
+
+    cur_ping_ = 0;
+    // Check the ping count
+    pings_ = -1;
+    pings_ = BVTHead_GetPingCount(head_);
+    printf("BVTHead_GetPingCount: %d\n", pings_);
+
+    // Set the range window
+    this->setRange(min_range_, max_range_);
+
+    initialized_ = true;
+
+    return Sonar::Success;
 }
 
 Sonar::Status_t Sonar::setSonarLogEnable(bool enable)
@@ -205,6 +262,12 @@ Sonar::Status_t Sonar::setSonarLogEnable(bool enable)
 
 Sonar::Status_t Sonar::getNextSonarData()
 {
+
+  if ((mode_ == Sonar::sonar_file) && (cur_ping_ == pings_))
+  {
+    //Try to open next, if you succeed, reset cur_ping_
+    openNextFile();
+  }
   Status_t status = Sonar::Failure;
   if (mode_ == Sonar::net)
   {

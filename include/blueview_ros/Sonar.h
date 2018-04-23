@@ -5,6 +5,7 @@
 
 #include <opencv2/opencv.hpp>
 #include <iostream>
+#include <sstream>
 
 #if ENABLE_SONAR == 1
 #include <bvt_sdk.h>
@@ -36,6 +37,8 @@ public:
     Sonar();
     ~Sonar();
     Status_t init();
+
+    Sonar::Status_t openNextFile();
 
     Status_t getNextSonarData();
     Status_t getSonarData(int index);
@@ -110,6 +113,7 @@ protected:
 
     int heads_;
     int pings_;
+    int filesCount;
 
     int cur_ping_;
 
