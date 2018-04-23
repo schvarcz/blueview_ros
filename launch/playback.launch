@@ -14,8 +14,10 @@
         <param name="max_dist" type="double" value="40" />
         <param name="min_dist" type="double" value="0" />
         <param name="base_link_name" type="string" value="base_link" />
-        <param name="time_diff" value="7200"/>
-        <param name="first_time" value="39596"/>
+        <param name="time_diff" value="0"/>
+        <param name="first_time" value="0"/>
+        <!--<param name="time_diff" value="7200"/>-->
+        <!--<param name="first_time" value="39596"/>-->
     </node>
 
     <!--<node name="rviz" pkg="rviz" type="rviz" args="-d $(find blueview_ros)/config/rviz.rviz" />-->
