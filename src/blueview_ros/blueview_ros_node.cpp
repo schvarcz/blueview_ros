@@ -264,6 +264,8 @@ int main(int argc, char **argv)
             net_or_file, address, base_link_name = "base_link";
     bool enable_range_data = false, enable_gray_image = false, enable_colored_image = false, enable_point_cloud = false;
 
+    bool new_range_data = false, new_gray_image = false, new_colored_image = false, new_point_cloud = false;
+
     // Grab distance range
     nh.getParam("min_dist", min_dist);
     nh.getParam("max_dist", max_dist);
@@ -350,42 +352,46 @@ int main(int argc, char **argv)
     {
         status = sonar.getNextSonarData();
 
-        seconds = sonar.getTimeStamp();
-        minutes = floor(seconds/60.);
-        hours = floor(minutes/60.);
-        days = floor(hours/24.);
-        seconds -= minutes*60;
-        minutes -= hours*60;
-        hours -= days*24;
-
-        std::cout << "TimeStamp: " << days << " " << hours << ":" << minutes << ":" << seconds << endl;
-        std::cout << "TimeZone: " << sonar.getTimeZoneOffset() << endl;
-
-        seconds = ((hours*60 + minutes)*60 + seconds);
-        std::cout << "Elapsed time: " << (seconds + timeDiff) - firstTime << endl;
-        if(firstTime == 0)
-          firstTime = seconds;
-
-        if (enable_gray_image || enable_point_cloud)
-            status = sonar.getSonarImage(img);
-
-//        if (enable_colored_image)
-//            status = sonar.getSonarColoredImage(imgColored);
-
-        if (enable_range_data)
-            status = sonar.getSonarScan(ranges);
-
         if (status == blueview::Sonar::Success)
         {
+          std::cout << "New data." << endl;
+
+          seconds = sonar.getTimeStamp();
+          minutes = floor(seconds/60.);
+          hours = floor(minutes/60.);
+          days = floor(hours/24.);
+          seconds -= minutes*60;
+          minutes -= hours*60;
+          hours -= days*24;
+
+          std::cout << "TimeStamp: " << days << " " << hours << ":" << minutes << ":" << seconds << endl;
+          std::cout << "TimeZone: " << sonar.getTimeZoneOffset() << endl;
+
+          seconds = ((hours*60 + minutes)*60 + seconds);
+          std::cout << "Elapsed time: " << (seconds + timeDiff) - firstTime << endl;
+          if(firstTime == 0)
+            firstTime = seconds;
+
             current_time.fromSec(start_time.toSec() + (seconds + timeDiff) - firstTime);
-            //current_time = ros::Time::now(); // ((hours*60 + minutes)*60 + seconds) + timeDiff
-            ros::Time::sleepUntil(current_time);
-//            rate.sleep();
+            current_time = ros::Time::now();
+//            ros::Time::sleepUntil(current_time);
+
+            if (enable_gray_image || enable_point_cloud)
+            {
+                new_gray_image = sonar.getSonarImage(img);
+                new_point_cloud = new_gray_image;
+            }
+
+            if (enable_colored_image)
+                new_colored_image = sonar.getSonarColoredImage(imgColored);
+
+            if (enable_range_data)
+                new_range_data = sonar.getSonarScan(ranges);
 
             try
             {
                 // Publish the images
-//                if (enable_gray_image)
+//                if (enable_gray_image && (new_gray_image  == blueview::Sonar::Success))
 //                {
 //                    cvi.header.stamp = current_time;
 //                    cvi.image = img;
@@ -393,7 +399,7 @@ int main(int argc, char **argv)
 //                    image_pub.publish(msg_img);
 //                }
 
-//                if (enable_colored_image)
+//                if (enable_colored_image && (new_colored_image  == blueview::Sonar::Success))
 //                {
 //                    cvic.header.stamp = current_time;
 //                    cvic.image = imgColored;
@@ -407,7 +413,7 @@ int main(int argc, char **argv)
             }
 
             //Publish Range Data
-            if (enable_range_data)
+            if (enable_range_data && (new_range_data  == blueview::Sonar::Success))
             {
                 msg_laser.header.stamp = current_time;
                 msg_laser.angle_min = sonar.getBearingMinAngle()*M_PI/180.;
@@ -428,7 +434,7 @@ int main(int argc, char **argv)
             }
 
             //Publish Point Cloud
-            if (enable_point_cloud)
+            if (enable_point_cloud && (new_point_cloud  == blueview::Sonar::Success))
             {
                 pc_msg = cv2pointCloud(img);
                 pc_msg.header.stamp = current_time;
@@ -455,7 +461,11 @@ int main(int argc, char **argv)
             cv::waitKey(33);
 //            densityFilter(img, msg_laser);
 
-          }
+            rate.sleep();
+
+        }
+        else
+          std::cout << "No data." << endl;
 
         ros::spinOnce();
     }
