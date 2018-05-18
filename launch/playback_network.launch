@@ -1,5 +1,5 @@
 <launch>
-    <!--<arg name="sonar_address" default="/home/schvarcz/Desktop/sonar_guerledan/Oct_13_2017_110048.son" />-->
+    <!--<arg name="sonar_address" default="/home/schvarcz/Desktop/sonar_guerledan/Oct_13_2017_110048" />-->
     <arg name="sonar_address" default="192.168.0.30" />
     <arg name="color_map_file" default="$(find blueview_ros)/colormaps/jet.cmap" />
 
@@ -7,11 +7,11 @@
         <param name="address" type="string" value="$(arg sonar_address)" /> <!-- if net, ip address : if file, path -->
         <param name="net_or_file" type="string" value="net" /> <!-- file or net -->
         <param name="enable_range_data" type="bool" value="true" />
-        <param name="enable_gray_image" type="bool" value="false" />
-        <param name="enable_colored_image" type="bool" value="false" />
+        <param name="enable_gray_image" type="bool" value="true" />
+        <param name="enable_colored_image" type="bool" value="true" />
         <param name="enable_point_cloud" type="bool" value="true" />
         <param name="color_map" type="string" value="$(arg color_map_file)" />
-        <param name="tick_rate" type="double" value="1.0" />
+        <param name="tick_rate" type="double" value="10.0" />
         <param name="max_dist" type="double" value="6" />
         <param name="min_dist" type="double" value="0" />
         <param name="base_link_name" type="string" value="base_link" />

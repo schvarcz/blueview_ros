@@ -268,6 +268,7 @@ Sonar::Status_t Sonar::getNextSonarData()
     //Try to open next, if you succeed, reset cur_ping_
     openNextFile();
   }
+
   Status_t status = Sonar::Failure;
   if (mode_ == Sonar::net)
   {
@@ -434,15 +435,12 @@ Sonar::Status_t Sonar::getSonarColoredImage(cv::Mat &image_colored)
 Sonar::Status_t Sonar::getSonarScan(std::vector<double> &ranges)
 {
   Status_t status = Sonar::Failure;
-  if(cur_ping_> 0) //For the real BlueView is not going to work
-  {
-    status = Sonar::Success;
+  status = Sonar::Success;
 
-    BVTPing_GetRangeData( ping_, range_ );
-    ranges.resize(range_.GetCount());
-    for(int j=0; j<range_.GetCount(); j++)
-      ranges[j] = range_.GetRangeValue(j);
-  }
+  BVTPing_GetRangeData( ping_, range_ );
+  ranges.resize(range_.GetCount());
+  for(int j=0; j<range_.GetCount(); j++)
+    ranges[j] = range_.GetRangeValue(j);
 
   return status;
 }

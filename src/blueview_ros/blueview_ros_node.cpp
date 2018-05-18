@@ -372,25 +372,28 @@ int main(int argc, char **argv)
           if(firstTime == 0)
             firstTime = seconds;
 
+          current_time = ros::Time::now();
+          if (net_or_file == "file")
+          {
             current_time.fromSec(start_time.toSec() + (seconds + timeDiff) - firstTime);
-            current_time = ros::Time::now();
-//            ros::Time::sleepUntil(current_time);
+            ros::Time::sleepUntil(current_time);
+          }
 
-            if (enable_gray_image || enable_point_cloud)
-            {
-                new_gray_image = sonar.getSonarImage(img);
-                new_point_cloud = new_gray_image;
-            }
+          if (enable_gray_image || enable_point_cloud)
+          {
+              new_gray_image = sonar.getSonarImage(img);
+              new_point_cloud = new_gray_image;
+          }
 
-            if (enable_colored_image)
-                new_colored_image = sonar.getSonarColoredImage(imgColored);
+          if (enable_colored_image)
+              new_colored_image = sonar.getSonarColoredImage(imgColored);
 
-            if (enable_range_data)
-                new_range_data = sonar.getSonarScan(ranges);
+          if (enable_range_data)
+              new_range_data = sonar.getSonarScan(ranges);
 
-            try
-            {
-                // Publish the images
+          try
+          {
+              // Publish the images
 //                if (enable_gray_image && (new_gray_image  == blueview::Sonar::Success))
 //                {
 //                    cvi.header.stamp = current_time;
@@ -407,60 +410,61 @@ int main(int argc, char **argv)
 //                    image_pub_colored.publish(msg_img_colored);
 //                }
 
-            } catch (cv_bridge::Exception& e) {
-                ROS_ERROR("cv_bridge exception: %s", e.what());
-                return -1;
-            }
+          } catch (cv_bridge::Exception& e) {
+              ROS_ERROR("cv_bridge exception: %s", e.what());
+              return -1;
+          }
 
-            //Publish Range Data
-            if (enable_range_data && (new_range_data  == blueview::Sonar::Success))
-            {
-                msg_laser.header.stamp = current_time;
-                msg_laser.angle_min = sonar.getBearingMinAngle()*M_PI/180.;
-                msg_laser.angle_max = sonar.getBearingMaxAngle()*M_PI/180.;
-                msg_laser.angle_increment = sonar.getBearingResolution()*M_PI/180.;
-                msg_laser.range_min = sonar.getRangeMin();
-                msg_laser.range_max = sonar.getRangeMax();
+          //Publish Range Data
+          if (enable_range_data && (new_range_data  == blueview::Sonar::Success))
+          {
+              msg_laser.header.stamp = current_time;
+              msg_laser.angle_min = sonar.getBearingMinAngle()*M_PI/180.;
+              msg_laser.angle_max = sonar.getBearingMaxAngle()*M_PI/180.;
+              msg_laser.angle_increment = sonar.getBearingResolution()*M_PI/180.;
+              msg_laser.range_min = sonar.getRangeMin();
+              msg_laser.range_max = sonar.getRangeMax();
 
-                msg_laser.ranges.clear();
-                msg_laser.ranges.insert(msg_laser.ranges.begin(), ranges.rbegin(),ranges.rend());
+              msg_laser.ranges.clear();
+              msg_laser.ranges.insert(msg_laser.ranges.begin(), ranges.rbegin(),ranges.rend());
 
-                for(int i =0; i< msg_laser.ranges.size(); i++)
-                {
+              for(int i =0; i< msg_laser.ranges.size(); i++)
+              {
 //                    if(msg_laser.ranges.at(i) == 1000)
 //                        msg_laser.ranges[i] = numeric_limits<float>::nan();
-                }
-                scan_pub.publish(msg_laser);
-            }
+              }
+              scan_pub.publish(msg_laser);
+          }
 
-            //Publish Point Cloud
-            if (enable_point_cloud && (new_point_cloud  == blueview::Sonar::Success))
-            {
-                pc_msg = cv2pointCloud(img);
-                pc_msg.header.stamp = current_time;
-                pc_msg.header.frame_id = base_link_name;
-                pc_pub.publish(pc_msg);
-            }
+          //Publish Point Cloud
+          if (enable_point_cloud && (new_point_cloud  == blueview::Sonar::Success))
+          {
+              pc_msg = cv2pointCloud(img);
+              pc_msg.header.stamp = current_time;
+              pc_msg.header.frame_id = base_link_name;
+              pc_pub.publish(pc_msg);
+          }
 
-            imageFilter(img);
-            cv::Mat colored;
-            img.convertTo(img, CV_32F);
-            double minn, maxx;
-            cv::minMaxIdx(img, &minn, &maxx);
-            img = (img-minn)/(maxx-minn);
-            cv::cvtColor(img, colored, CV_GRAY2BGR);
-            drawScan(colored, msg_laser,cv::Scalar(0,0,255));
-            densityFilter2(msg_laser);
-            drawScan(colored, msg_laser,cv::Scalar(0, 255, 255));
-            medianFilter(msg_laser);
-            drawScan(colored, msg_laser,cv::Scalar(255,0,255));
-            surfaceFilter(msg_laser);
-            drawScan(colored, msg_laser,cv::Scalar(255,0,0));
+//          imageFilter(img);
+//          cv::Mat colored;
+//          img.convertTo(img, CV_32F);
+//          double minn, maxx;
+//          cv::minMaxIdx(img, &minn, &maxx);
+//          img = (img-minn)/(maxx-minn);
+//          cv::cvtColor(img, colored, CV_GRAY2BGR);
+//          drawScan(colored, msg_laser,cv::Scalar(0,0,255));
+//          densityFilter2(msg_laser);
+//          drawScan(colored, msg_laser,cv::Scalar(0, 255, 255));
+//          medianFilter(msg_laser);
+//          drawScan(colored, msg_laser,cv::Scalar(255,0,255));
+//          surfaceFilter(msg_laser);
+//          drawScan(colored, msg_laser,cv::Scalar(255,0,0));
 
-            cv::imshow("Ranges", colored);
-            cv::waitKey(33);
+//          cv::imshow("Ranges", colored);
+//          cv::waitKey(33);
 //            densityFilter(img, msg_laser);
 
+          if (net_or_file == "net")
             rate.sleep();
 
         }
